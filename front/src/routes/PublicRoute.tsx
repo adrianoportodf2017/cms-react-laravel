@@ -1,10 +1,15 @@
 import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
 
-interface PublicRouteProps { children: ReactNode; redirectTo?: string; }
+interface PublicRouteProps { 
+  children: ReactNode; 
+}
 
-export function PublicRoute({ children, redirectTo = '/' }: PublicRouteProps) {
-  const isAuthenticated = localStorage.getItem('token');
-  if (isAuthenticated) return <Navigate to={redirectTo} replace />;
+/**
+ * PublicRoute - Permite acesso a páginas públicas
+ * Usuários autenticados e não autenticados podem acessar
+ */
+export function PublicRoute({ children }: PublicRouteProps) {
+  // Páginas públicas são acessíveis para TODOS
+  // Não fazemos verificação de autenticação aqui
   return <>{children}</>;
 }

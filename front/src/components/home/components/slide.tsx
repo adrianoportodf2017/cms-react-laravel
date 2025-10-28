@@ -9,8 +9,8 @@ export function Slides() {
       subtitle: '',
       cta: 'Doe agora e faça parte dessa corrente do bem!',
       link: '/doar',
-      img: '/slide1.png',
-      imgMobile: '/slide1-mobile.png', // Imagem específica para mobile
+      img: 'slide1.png',
+      imgMobile: 'slide1-mobile.png', // Imagem específica para mobile
     },
     {
       title: 'Instituto COOPERFORTE',

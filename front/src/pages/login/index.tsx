@@ -1,72 +1,232 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
-  const [login, setLogin] = useState('antonio@gmail.com');
-  const [password, setPassword] = useState('12345678');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    remember: false,
+  });
+
+  // ✅ CORREÇÃO: Redireciona apenas UMA VEZ quando já estiver autenticado
+  // Usa useEffect com array de dependências vazio para executar apenas na montagem
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname || '/admin';
+      navigate(from, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← Executa apenas quando o componente monta
+
+  // Limpa erro ao desmontar componente
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+
+    if (!formData.email || !formData.password) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+
+    try {
+      await login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // ✅ Login bem-sucedido
+      toast.success('Login realizado com sucesso!');
+      
+      // Redireciona após login bem-sucedido
+      const from = (location.state as any)?.from?.pathname || '/admin';
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      // ✅ Erro no login - apenas mostra o toast
+      // NÃO redireciona, mantém o usuário na página de login
+      alert(error.message || 'Erro ao fazer login');
+     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
   return (
-    <div className="flex min-h-screen items-center bg-gray-50 p-6 dark:bg-gray-900">
-      <div className="mx-auto h-full w-full max-w-4xl flex-1 overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="flex flex-col overflow-y-auto md:flex-row">
-          {/* Lado da imagem */}
-          <div className="h-32 md:h-auto md:w-1/2">
-            {/* Light */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Card de Login */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          {/* Logo/Título */}
+          <div className="text-center mb-8">
             <img
-              aria-hidden="true"
-              className="h-full w-full object-cover dark:hidden"
-              src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1200&auto=format&fit=crop"
-              alt="Office"
+              src="/2023_04_10_NovaLogo_SEMSLOGAN.png"
+              alt="Instituto Cooperforte"
+              className="w-48 mx-auto mb-6"
             />
-            {/* Dark */}
-            <img
-              aria-hidden="true"
-              className="hidden h-full w-full object-cover dark:block"
-              src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1200&auto=format&fit=crop"
-              alt="Office dark"
-            />
+            <h1 className="text-2xl font-bold text-gray-800">
+              Bem-vindo de volta
+            </h1>
+            <p className="text-gray-500 mt-2">
+              Faça login para acessar o sistema
+            </p>
           </div>
 
-          {/* Lado do formulário */}
-          <div className="flex items-center justify-center p-6 sm:p-12 md:w-1/2">
-            <div className="w-full">
-              <h1 className="mb-4 text-xl font-semibold text-gray-700 dark:text-gray-200">
-                Login
-              </h1>
-
-              <form className="space-y-4">
-                <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-400">Login</span>
-                  <input
-                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                    placeholder="seu.usuario ou email"
-                    value={login}
-                    onChange={(e) => setLogin(e.target.value)}
-                    autoComplete="username"
-                  />
-                </label>
-
-                <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-400">Senha</span>
-                  <input
-                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                    placeholder="***************"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="mt-2 block w-full rounded-lg border border-transparent bg-purple-600 px-4 py-2 text-center text-sm font-medium leading-5 text-white transition-colors duration-150 hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-400/40 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                </button>
-              </form>
-              <hr className="my-8" />
-              <div className="flex items-center justify-between text-sm">
+          {/* Mensagem de Erro */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-medium">Erro ao fazer login</p>
+                <p className="text-sm text-red-600 mt-1">{error}</p>
               </div>
             </div>
+          )}
+
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label 
+                htmlFor="email" 
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                E-mail
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                placeholder="seu@email.com"
+              />
+            </div>
+
+            {/* Senha */}
+            <div>
+              <label 
+                htmlFor="password" 
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Senha
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none pr-12 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Lembrar-me e Esqueci a senha */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  checked={formData.remember}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                />
+                <span className="ml-2 text-sm text-gray-600">
+                  Lembrar-me
+                </span>
+              </label>
+              <a
+                href="/recuperar-senha"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Esqueci a senha
+              </a>
+            </div>
+
+            {/* Botão de Login */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Entrar
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divisor */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">
+                ou
+              </span>
+            </div>
+          </div>
+
+          {/* Link para voltar ao site */}
+          <div className="text-center">
+            <a
+              href="/"
+              className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-1"
+            >
+              <span>←</span> Voltar para o site
+            </a>
           </div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-sm text-gray-500 mt-6">
+          © {new Date().getFullYear()} Instituto Cooperforte. Todos os direitos reservados.
+        </p>
       </div>
     </div>
   );
