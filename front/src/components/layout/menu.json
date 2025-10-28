@@ -1,0 +1,107 @@
+{
+  "menuItems": [
+    {
+      "id": "sobre-nos",
+      "title": "Sobre Nós",
+      "hasDropdown": true,
+      "link": "#",
+      "dropdownMinWidth": "220px",
+      "submenu": [
+        {
+          "title": "História e Ideologia",
+          "link": "https://ic-cf.org.br/novo-site-instituto/sobre-nos/historia-e-ideologia",
+          "description": "Sobre Nós - História e Ideologia"
+        },
+        {
+          "title": "Propósito, Valores e Negócio",
+          "link": "https://ic-cf.org.br/novo-site-instituto/sobre-nos/missao-visao-valores",
+          "description": "Sobre Nós - Propósito, Valores e Negócio"
+        },
+        {
+          "title": "Governança",
+          "link": "https://ic-cf.org.br/novo-site-instituto/sobre-nos/governanca",
+          "description": "Sobre Nós - Governança"
+        }
+      ]
+    },
+    {
+      "id": "projetos-editais",
+      "title": "Projetos e Editais",
+      "hasDropdown": true,
+      "link": "#",
+      "dropdownMinWidth": "260px",
+      "submenu": [
+        {
+          "title": "Projetos",
+          "link": "#",
+          "description": "Projetos e Editais - Projetos"
+        },
+        {
+          "title": "Editais",
+          "link": "#",
+          "description": "Projetos e Editais - Editais"
+        },
+        {
+          "title": "Programas Ações Solidárias",
+          "link": "#",
+          "description": "Projetos e Editais - Programas Ações Solidárias"
+        }
+      ]
+    },
+    {
+      "id": "transparencia",
+      "title": "Transparência",
+      "hasDropdown": false,
+      "link": "#",
+      "description": "Transparência"
+    },
+    {
+      "id": "doe",
+      "title": "Doe",
+      "hasDropdown": false,
+      "link": "#",
+      "description": "Doe"
+    },
+    {
+      "id": "associe-se",
+      "title": "Associe-se",
+      "hasDropdown": false,
+      "link": "#",
+      "description": "Associe-se"
+    },
+    {
+      "id": "noticias",
+      "title": "Notícias",
+      "hasDropdown": false,
+      "link": "#",
+      "description": "Notícias"
+    },
+    {
+      "id": "contato",
+      "title": "Contato",
+      "hasDropdown": false,
+      "link": "#",
+      "description": "Contato"
+    }
+  ],
+  "bottomMenuItems": [
+    {
+      "id": "associe-se-bottom",
+      "title": "Associe-se",
+      "link": "/associe",
+      "icon": "user-plus"
+    },
+    {
+      "id": "menu-bottom",
+      "title": "Menu",
+      "action": "toggle-menu",
+      "icon": "menu"
+    },
+    {
+      "id": "contato-bottom",
+      "title": "Contato",
+      "link": "#",
+      "icon": "phone"
+    }
+  ]
+}
