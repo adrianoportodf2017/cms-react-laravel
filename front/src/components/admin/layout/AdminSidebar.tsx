@@ -11,7 +11,7 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../../auth/auth-store';
 
 interface MenuItem {
   title: string;
@@ -56,6 +56,12 @@ export default function AdminSidebar() {
       title: 'Configurações',
       icon: <Settings className="w-5 h-5" />,
       path: '/admin/settings',
+    },
+     {
+      title: 'sair',
+      icon: <LogOut className="w-5 h-5" />
+,
+      path: '/logout',
     },
   ];
 
@@ -214,17 +220,7 @@ export default function AdminSidebar() {
               </div>
             ))}
           </nav>
-
-          {/* Logout Button */}
-          <div className="p-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Sair</span>
-            </button>
-          </div>
+ 
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200">

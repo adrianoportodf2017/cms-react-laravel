@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@tiptap/extension-color": "^3.9.1",
+    "@tiptap/extension-highlight": "^3.9.1",
+    "@tiptap/extension-image": "^3.9.1",
+    "@tiptap/extension-link": "^3.9.1",
+    "@tiptap/extension-text-align": "^3.9.1",
+    "@tiptap/extension-text-style": "^3.9.1",
+    "@tiptap/extension-underline": "^3.9.1",
+    "@tiptap/react": "^3.9.1",
+    "@tiptap/starter-kit": "^3.9.1",
+    "flowbite": "^3.1.2",
+    "flowbite-react": "^0.12.10"
+  }
+}

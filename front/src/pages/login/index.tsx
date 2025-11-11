@@ -1,72 +1,104 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../auth';
 import { toast } from 'sonner';
+import { axiosConfig } from '../../lib/axios';
+import type { LoginCredentials, LoginResponse } from '../../types';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const { login, isAuthenticated } = useAuthStore();
   
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<LoginCredentials & { remember: boolean }>({
     email: '',
     password: '',
     remember: false,
   });
 
-  // ✅ CORREÇÃO: Redireciona apenas UMA VEZ quando já estiver autenticado
-  // Usa useEffect com array de dependências vazio para executar apenas na montagem
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       const from = (location.state as any)?.from?.pathname || '/admin';
       navigate(from, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ← Executa apenas quando o componente monta
-
-  // Limpa erro ao desmontar componente
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
+  }, [isAuthenticated, location.state, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError(null);
 
-    if (!formData.email || !formData.password) {
-      toast.error('Preencha todos os campos');
+    const { email, password } = formData;
+
+    // Validação melhorada
+    if (!email.trim() || !password.trim()) {
+      toast.error('Por favor, preencha todos os campos');
       return;
     }
 
+    // Validação de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Por favor, insira um e-mail válido');
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      await login({
-        email: formData.email,
-        password: formData.password,
+      const response = await axiosConfig.post<LoginResponse>('/auth/login', {
+        email: email.trim().toLowerCase(),
+        password,
       });
 
-      // ✅ Login bem-sucedido
+      const { token, user } = response.data;
+
+      // Implementar "Lembrar-me"
+      if (formData.remember) {
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberMe');
+      }
+
+      login(token, user);
       toast.success('Login realizado com sucesso!');
       
-      // Redireciona após login bem-sucedido
       const from = (location.state as any)?.from?.pathname || '/admin';
       navigate(from, { replace: true });
-    } catch (error: any) {
-      // ✅ Erro no login - apenas mostra o toast
-      // NÃO redireciona, mantém o usuário na página de login
-      alert(error.message || 'Erro ao fazer login');
-     }
+    } catch (err: any) {
+      console.error('Erro no login:', err);
+      
+      const errorMessage = 
+        err.response?.data?.message || 
+        err.response?.data?.error ||
+        'Falha na autenticação. Verifique suas credenciais.';
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    
+    // Limpa o erro quando o usuário começar a digitar
+    if (error) {
+      setError(null);
+    }
   };
+
+  // Prevenir múltiplos envios
+  const isFormValid = formData.email.trim() && formData.password.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -79,6 +111,10 @@ export default function LoginPage() {
               src="/2023_04_10_NovaLogo_SEMSLOGAN.png"
               alt="Instituto Cooperforte"
               className="w-48 mx-auto mb-6"
+              onError={(e) => {
+                // Fallback se a imagem não carregar
+                e.currentTarget.style.display = 'none';
+              }}
             />
             <h1 className="text-2xl font-bold text-gray-800">
               Bem-vindo de volta
@@ -90,7 +126,7 @@ export default function LoginPage() {
 
           {/* Mensagem de Erro */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 animate-fade-in">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-red-800 font-medium">Erro ao fazer login</p>
@@ -113,6 +149,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={formData.email}
                 onChange={handleChange}
@@ -135,6 +172,7 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -146,7 +184,8 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 p-1 rounded"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -183,7 +222,7 @@ export default function LoginPage() {
             {/* Botão de Login */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !isFormValid}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
             >
               {isLoading ? (
