@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@tiptap/extension-color": "^3.9.1",
-    "@tiptap/extension-highlight": "^3.9.1",
+    "@tiptap/extension-highlight": "^3.10.5",
     "@tiptap/extension-image": "^3.9.1",
     "@tiptap/extension-link": "^3.9.1",
     "@tiptap/extension-text-align": "^3.9.1",

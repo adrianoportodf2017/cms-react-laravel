@@ -1,8 +1,8 @@
-import { PageBuilder }  from "../../../components/admin/page-builder/index";
+import { PageBuilder }  from "../../../components/admin/page-builder";
 
 export const PageBuilderPage = () => {
     return (
-        <div className="w-full">
+        <div className="w-full  overflow-hidden">
             <PageBuilder />
         </div>
     );

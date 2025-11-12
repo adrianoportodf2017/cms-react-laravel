@@ -15,10 +15,17 @@ class StorePageRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:180'],
-            'slug' => ['required', 'string', 'max:200', 'regex:/^[a-z0-9-]+$/', 'unique:pages,slug'],
+            'slug' => ['nullable', 'string', 'max:200', 'regex:/^[a-z0-9-]+$/', 'unique:pages,slug'], // ✅ Mudei para nullable
             'content' => ['required', 'array'],
-            'content.type' => ['required', 'in:tiptap-html'],
-            'content.html' => ['required', 'string'],
+            
+            // ✅ REMOVA essas linhas:
+            // 'content.type' => ['required', 'in:tiptap-html'],
+            // 'content.html' => ['required', 'string'],
+            
+            // ✅ ADICIONE essas (ambas opcionais):
+            'content.html' => ['sometimes', 'string'],
+            'content.puck' => ['sometimes', 'array'],
+            
             'status' => ['required', 'in:draft,published,archived'],
 
             'category_id'   => ['nullable', 'uuid'],
@@ -30,11 +37,10 @@ class StorePageRequest extends FormRequest
             'in_main_menu'  => ['sometimes', 'boolean'],
             'display_order' => ['sometimes', 'integer', 'min:0', 'max:100000'],
 
-            // 🔹 novos campos
             'icon'          => ['nullable', 'string', 'max:100'],
             'button_label'  => ['nullable', 'string', 'max:150'],
             'action'        => ['nullable', 'string', 'max:150'],
-            'featured_image'=> ['nullable', 'image', 'max:2048'], // até 2MB
+            'featured_image'=> ['nullable', 'image', 'max:2048'],
         ];
     }
 }

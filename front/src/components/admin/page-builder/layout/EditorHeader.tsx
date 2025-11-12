@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Eye, Code, Move, Palette } from 'lucide-react';
+import { ArrowLeft  } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export type PageStatus = 'draft' | 'published' | 'archived';
@@ -15,9 +15,11 @@ interface EditorHeaderProps {
   showPreview: boolean;
   showCodeEditor: boolean;
   showOutline: boolean;
+  showComponentsPanel: boolean; // 🆕
   onToggleCodeEditor: () => void;
   onTogglePreview: () => void;
   onToggleOutline: () => void;
+  onToggleComponentsPanel: () => void; // 🆕
   onAddTailwindBlock: () => void;
 }
 
@@ -37,27 +39,19 @@ const btn =
   'inline-flex items-center gap-2 rounded-lg border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50';
 const btnSm = 'px-3 py-1.5 text-sm';
 const btnGhost = 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50';
-const btnDark = 'bg-gray-900 text-white border-gray-900 hover:bg-black';
-const btnPrimary = 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700';
+ 
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
   status,
   isEditMode = false,
   titleOverride,
-  authorName,
-  showPreview,
-  showCodeEditor,
-  showOutline,
-  onToggleCodeEditor,
-  onTogglePreview,
-  onToggleOutline,
-  onAddTailwindBlock,
-}) => {
+  authorName
+ }) => {
   const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+      <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* título e status */}
           <div className="flex items-center gap-3 min-w-0">
@@ -88,37 +82,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
           </div>
 
           {/* toggles principais */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={onAddTailwindBlock}
-              className={`${btn} ${btnDark} ${btnSm}`}
-              title="Inserir blocos prontos em Tailwind"
-            >
-              <Palette className="w-4 h-4" />
-              Blocos
-            </button>
-            <button
-              onClick={onToggleOutline}
-              className={`${btn} ${btnGhost} ${btnSm} ${showOutline ? 'ring-2 ring-blue-200' : ''}`}
-              title="Mostrar/Ocultar Outline + Drag & Drop"
-            >
-              <Move className="w-4 h-4" />
-              {showOutline ? 'Arrastar' : 'Outline'}
-            </button>
-            <button
-              onClick={onToggleCodeEditor}
-              className={`${btn} ${showCodeEditor ? btnDark : btnGhost} ${btnSm}`}
-            >
-              <Code className="w-4 h-4" />
-              {showCodeEditor ? 'Visual' : 'Código'}
-            </button>
-            <button
-              onClick={onTogglePreview}
-              className={`${btn} ${showPreview ? btnPrimary : btnGhost} ${btnSm}`}
-            >
-              <Eye className="w-4 h-4" />
-              {showPreview ? 'Editar' : 'Preview'}
-            </button>
+          <div className="flex flex-wrap items-center gap-2">         
+ 
           </div>
         </div>
       </div>

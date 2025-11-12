@@ -12,7 +12,7 @@ import {
 } from '../../../services/pages/api';
 
 // ✅ usa seus types já existentes
-import type { PagesListResponse, PageResponse } from '../../../types/page-builder.types';
+import type { PagesListResponse } from '../../../types/page-builder.types';
 
 // Caso você já tenha um tipo de item de página exportado, use-o aqui.
 // Senão, este fallback garante compatibilidade com os campos usados no componente.
@@ -51,7 +51,7 @@ function getPaginationFromListResponse(resp: PagesListResponse) {
   };
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 1000;
 
 export const PageList = () => {
   const navigate = useNavigate();
