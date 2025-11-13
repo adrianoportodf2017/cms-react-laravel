@@ -57,3 +57,48 @@
 .prose {
   max-width: none;
 }
+
+/* ===== DROPDOWN STYLES ===== */
+
+/* Estado fechado */
+.dropdown-content[data-dropdown-open="false"] {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Estado aberto */
+.dropdown-content[data-dropdown-open="true"] {
+  max-height: 2000px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Rotação do ícone */
+.dropdown-icon {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.dropdown-icon-open {
+  transform: rotate(90deg);
+}
+
+/* Cursor no trigger */
+.dropdown-trigger {
+  cursor: pointer;
+  user-select: none;
+}
+
+.dropdown-trigger:active {
+  transform: scale(0.99);
+}
+
+.Puck-headerActions button:last-child {
+  font-size: 0;
+}
+
+.Puck-headerActions button:last-child::after {
+  content: 'Publicar';
+  font-size: 0.875rem;
+}
+

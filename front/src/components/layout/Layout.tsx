@@ -1,19 +1,18 @@
+// src/components/public/Layout.tsx
+
 import Header from './Header'
 import Footer from './Footer'
- import { Outlet } from 'react-router-dom'
-
+import { Outlet } from 'react-router-dom'
 
 export default function Layout() {
   return (
-    <div className={`w-full`}>
+    <div className="w-full">
       <div className="flex flex-1 flex-col">
         <Header />
-         <main className="h-full overflow-y-auto  bg-gray-50  ">
-          <div className="container-fluid mx-auto grid ">
-            <Outlet />
-          </div>
+        <main className="flex-1 bg-gray-50">
+          <Outlet />
         </main>
-         <Footer />
+        <Footer />
       </div>
     </div>
   )

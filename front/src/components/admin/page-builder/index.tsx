@@ -1,4 +1,4 @@
-// src/components/admin/page-builder/index.tsx
+// src/components/admin/page-builder/index.tsx (refatorado)
 import { useEffect, useState } from 'react';
 import { Puck, Render, type Data } from '@measured/puck';
 import { renderToString } from 'react-dom/server';
@@ -18,15 +18,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { PuckData } from '../../../types/page-builder.types';
 import { convertToPuckData, convertFromPuckData } from '../../../types/page-builder.types';
 import { EditorHeader } from './layout/EditorHeader';
-import { 
-  Save, 
-  UploadCloud, 
-  Archive, 
-  Copy, 
-  Star,
-  ChevronRight,
-  ChevronDown
-} from 'lucide-react';
+import { Sidebar } from './layout/Sidebar';
 
 /**
  * Gera slug a partir do nome
@@ -79,7 +71,7 @@ export const PageBuilder = () => {
   
   const [puckData, setPuckData] = useState<PuckData>(initialData);
   const [puckKey, setPuckKey] = useState(0);
-  const [pageTitle, setPageTitle] = useState('Nova Página');
+  const [pageTitle, setPageTitle] = useState('');
   const [pageSlug, setPageSlug] = useState('');
   const [htmlCode, setHtmlCode] = useState('');
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -96,16 +88,7 @@ export const PageBuilder = () => {
   const [parentOptions, setParentOptions] = useState<Array<{ value: string; label: string }>>([]);
   
   // UI
-  const [showCodeEditor, setShowCodeEditor] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showOutline, setShowOutline] = useState(false);
-  const [showComponentsPanel, setShowComponentsPanel] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [sidebarSection, setSidebarSection] = useState({
-    publicar: true,
-    hierarquia: true,
-    outras: true
-  });
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Hooks de mutation
   const salvarPagina = useSalvarPagina();
@@ -160,11 +143,9 @@ export const PageBuilder = () => {
 
   // Atualiza HTML quando Puck muda
   useEffect(() => {
-    if (!showCodeEditor) {
-      const html = generateHtml(puckData);
-      setHtmlCode(html);
-    }
-  }, [puckData, showCodeEditor]);
+    const html = generateHtml(puckData);
+    setHtmlCode(html);
+  }, [puckData]);
 
   // Handler para nome - gera slug automaticamente
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +178,7 @@ export const PageBuilder = () => {
     in_main_menu: inMainMenu,
     parent_id: parentId ?? undefined,
     content: {
-      html: showCodeEditor ? htmlCode : generateHtml(puckData),
+      html: htmlCode,
       puck: puckData,
     },
     ...override,
@@ -314,15 +295,8 @@ export const PageBuilder = () => {
         isEditMode={!!id}
         titleOverride={pageTitle}
         authorName={pageData?.data?.author_name}
-        showPreview={showPreview}
-        showCodeEditor={showCodeEditor}
-        showOutline={showOutline}
-        showComponentsPanel={showComponentsPanel}
-        onToggleCodeEditor={() => setShowCodeEditor(!showCodeEditor)}
-        onTogglePreview={() => setShowPreview(!showPreview)}
-        onToggleOutline={() => setShowOutline(!showOutline)}
-        onToggleComponentsPanel={() => setShowComponentsPanel(!showComponentsPanel)}
-        onAddTailwindBlock={() => {}}
+        showSidebar={showSidebar}
+        onToggleSidebar={() => setShowSidebar(!showSidebar)}
       />
 
       {/* Conteúdo Principal */}
@@ -375,6 +349,9 @@ export const PageBuilder = () => {
                   data={convertFromPuckData(puckData)}
                   onPublish={handleSave}
                   onChange={handlePuckChange}
+                  headerTitle={pageTitle}
+                
+                  
                 />
               </div>
 
@@ -382,158 +359,30 @@ export const PageBuilder = () => {
           </div>
         </div>
 
-        {/* Sidebar Direita */}
-        {showSidebar && (
-          <aside className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
-            <div className="p-4 space-y-4">
-              
-              {/* Seção: Publicar */}
-              <div className="border border-gray-200 rounded-lg">
-                <button
-                  onClick={() => setSidebarSection({...sidebarSection, publicar: !sidebarSection.publicar})}
-                  className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-800">Publicar</h3>
-                  {sidebarSection.publicar ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </button>
-                
-                {sidebarSection.publicar && (
-                  <div className="p-3 pt-0 space-y-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'Salvando...' : (id ? 'Salvar alterações' : 'Salvar página')}
-                    </button>
-
-                    <button
-                      onClick={handleSaveDraft}
-                      disabled={isSaving}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                    >
-                      <Save className="w-4 h-4" />
-                      Salvar como rascunho
-                    </button>
-
-                    <button
-                      onClick={handlePublish}
-                      disabled={!canPublish || isSaving}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <UploadCloud className="w-4 h-4" />
-                      Publicar
-                    </button>
-
-                    <button
-                      onClick={handleArchive}
-                      disabled={!canArchive || isSaving}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Archive className="w-4 h-4" />
-                      Arquivar
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Seção: Hierarquia */}
-              <div className="border border-gray-200 rounded-lg">
-                <button
-                  onClick={() => setSidebarSection({...sidebarSection, hierarquia: !sidebarSection.hierarquia})}
-                  className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-800">Hierarquia</h3>
-                  {sidebarSection.hierarquia ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </button>
-                
-                {sidebarSection.hierarquia && (
-                  <div className="p-3 pt-0 space-y-3">
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">Página Pai</label>
-                      <select
-                        value={parentId ?? ''}
-                        onChange={(e) => setParentId(e.target.value || null)}
-                        className="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-200 text-sm"
-                      >
-                        <option value="">— Sem pai (nível raiz) —</option>
-                        {parentOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">Posição no Menu</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={displayOrder}
-                        onChange={(e) => setDisplayOrder(parseInt(e.target.value || '0', 10))}
-                        className="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-200 text-sm"
-                      />
-                    </div>
-
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={inMainMenu}
-                        onChange={(e) => setInMainMenu(e.target.checked)}
-                        className="h-4 w-4 border-gray-300 rounded"
-                      />
-                      Exibir no menu principal
-                    </label>
-
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={isFeatured}
-                        onChange={(e) => setIsFeatured(e.target.checked)}
-                        className="h-4 w-4 border-amber-300 rounded"
-                      />
-                      <Star className="w-4 h-4 text-amber-500" />
-                      Marcar como destaque
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Seção: Outras Ações */}
-              {id && (
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => setSidebarSection({...sidebarSection, outras: !sidebarSection.outras})}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-semibold text-gray-800">Outras Ações</h3>
-                    {sidebarSection.outras ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  </button>
-                  
-                  {sidebarSection.outras && (
-                    <div className="p-3 pt-0">
-                      <button
-                        onClick={handleDuplicate}
-                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                      >
-                        <Copy className="w-4 h-4" /> Duplicar Página
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Dica */}
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-                <div className="font-semibold mb-1">💡 Dica</div>
-                Arraste componentes do painel esquerdo para criar sua página!
-              </div>
-
-            </div>
-          </aside>
-        )}
+        {/* Sidebar de Configurações */}
+        <Sidebar
+          isOpen={showSidebar}
+          onClose={() => setShowSidebar(false)}
+          status={status}
+          pageId={id}
+          parentId={parentId}
+          setParentId={setParentId}
+          displayOrder={displayOrder}
+          setDisplayOrder={setDisplayOrder}
+          inMainMenu={inMainMenu}
+          setInMainMenu={setInMainMenu}
+          isFeatured={isFeatured}
+          setIsFeatured={setIsFeatured}
+          parentOptions={parentOptions}
+          onSave={handleSave}
+          onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
+          onArchive={handleArchive}
+          onDuplicate={handleDuplicate}
+          isSaving={isSaving}
+          canPublish={canPublish}
+          canArchive={canArchive}
+        />
       </div>
 
       {/* Loading overlay */}

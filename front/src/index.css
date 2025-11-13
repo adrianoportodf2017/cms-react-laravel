@@ -12,3 +12,353 @@ textarea::placeholder {
 .dark textarea::placeholder {
   @apply text-gray-400;
 }
+
+/* ===== DROPDOWN STYLES ===== */
+
+/* Estado fechado */
+.dropdown-content[data-dropdown-open="false"] {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Estado aberto */
+.dropdown-content[data-dropdown-open="true"] {
+  max-height: 2000px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Rotação do ícone */
+.dropdown-icon {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.dropdown-icon-open {
+  transform: rotate(90deg);
+}
+
+/* Cursor no trigger */
+.dropdown-trigger {
+  cursor: pointer;
+  user-select: none;
+}
+
+.dropdown-trigger:active {
+  transform: scale(0.99);
+}
+
+.Puck-headerActions button:last-child {
+  font-size: 0;
+}
+
+.Puck-headerActions button:last-child::after {
+  content: 'Publicar';
+  font-size: 0.875rem;
+}/* src/index.css */
+
+/* ========================================
+   Estilos RichText - Quill Editor Output
+   ======================================== */
+
+/* Headings */
+.richtext-content h1 {
+  font-size: 1.875rem !important; /* 30px */
+  font-weight: 700 !important;
+  margin-bottom: 1rem !important;
+  color: #111827 !important;
+  line-height: 1.2 !important;
+}
+
+.richtext-content h2 {
+  font-size: 1.5rem !important; /* 24px */
+  font-weight: 700 !important;
+  margin-bottom: 0.75rem !important;
+  color: #111827 !important;
+  line-height: 1.3 !important;
+}
+
+.richtext-content h3 {
+  font-size: 1.25rem !important; /* 20px */
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+  color: #111827 !important;
+  line-height: 1.4 !important;
+}
+
+.richtext-content h4 {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  color: #111827 !important;
+  line-height: 1.4 !important;
+}
+
+.richtext-content h5 {
+  font-size: 1rem !important; /* 16px */
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  color: #111827 !important;
+  line-height: 1.5 !important;
+}
+
+.richtext-content h6 {
+  font-size: 0.875rem !important; /* 14px */
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  color: #111827 !important;
+  line-height: 1.5 !important;
+}
+
+/* Paragraphs */
+.richtext-content p {
+  color: #374151 !important;
+  line-height: 1.75 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Links */
+.richtext-content a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+}
+
+.richtext-content a:hover {
+  color: #1e40af !important;
+}
+
+/* Text formatting */
+.richtext-content strong {
+  font-weight: 700 !important;
+  color: #111827 !important;
+}
+
+.richtext-content em {
+  font-style: italic !important;
+}
+
+.richtext-content u {
+  text-decoration: underline !important;
+}
+
+.richtext-content s {
+  text-decoration: line-through !important;
+}
+
+/* Alinhamento - Classes do Quill */
+.richtext-content .ql-align-left {
+  text-align: left !important;
+}
+
+.richtext-content .ql-align-center {
+  text-align: center !important;
+}
+
+.richtext-content .ql-align-right {
+  text-align: right !important;
+}
+
+.richtext-content .ql-align-justify {
+  text-align: justify !important;
+}
+
+/* Indentação - Classes do Quill */
+.richtext-content .ql-indent-1 {
+  padding-left: 3em !important;
+}
+
+.richtext-content .ql-indent-2 {
+  padding-left: 6em !important;
+}
+
+.richtext-content .ql-indent-3 {
+  padding-left: 9em !important;
+}
+
+.richtext-content .ql-indent-4 {
+  padding-left: 12em !important;
+}
+
+.richtext-content .ql-indent-5 {
+  padding-left: 15em !important;
+}
+
+.richtext-content .ql-indent-6 {
+  padding-left: 18em !important;
+}
+
+.richtext-content .ql-indent-7 {
+  padding-left: 21em !important;
+}
+
+.richtext-content .ql-indent-8 {
+  padding-left: 24em !important;
+}
+
+/* 🔥 Lists - Acompanha alinhamento do texto */
+/* Reset de listas */
+.richtext-content ul,
+.richtext-content ol {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  margin-bottom: 0.75rem !important;
+  margin-top: 0 !important;
+  counter-reset: list-counter !important;
+}
+
+/* 🔥 Lista ordenada (números) - inline para seguir alinhamento */
+.richtext-content li[data-list="ordered"] {
+  counter-increment: list-counter !important;
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+  line-height: 1.75 !important;
+}
+
+.richtext-content li[data-list="ordered"]::before {
+  content: counter(list-counter) ". " !important;
+  font-weight: 400 !important;
+}
+
+/* 🔥 Lista não-ordenada (bullet) - inline para seguir alinhamento */
+.richtext-content li[data-list="bullet"] {
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+  line-height: 1.75 !important;
+}
+
+.richtext-content li[data-list="bullet"]::before {
+  content: "• " !important;
+  font-weight: 700 !important;
+}
+
+/* 🆕 Alinhamento específico para listas */
+/* Centralizado */
+.richtext-content li.ql-align-center[data-list="ordered"]::before,
+.richtext-content li.ql-align-center[data-list="bullet"]::before {
+  display: inline !important;
+}
+
+/* Direita */
+.richtext-content li.ql-align-right[data-list="ordered"]::before,
+.richtext-content li.ql-align-right[data-list="bullet"]::before {
+  display: inline !important;
+}
+
+/* Justificado */
+.richtext-content li.ql-align-justify[data-list="ordered"]::before,
+.richtext-content li.ql-align-justify[data-list="bullet"]::before {
+  display: inline !important;
+}
+
+/* Esconde o span .ql-ui que o Quill adiciona */
+.richtext-content .ql-ui {
+  display: none !important;
+}
+
+/* Items de lista com parágrafos internos */
+.richtext-content li p {
+  margin-bottom: 0 !important;
+  display: inline !important;
+}
+
+/* Blockquote */
+.richtext-content blockquote {
+  border-left: 4px solid #3b82f6 !important;
+  padding-left: 1rem !important;
+  font-style: italic !important;
+  color: #4b5563 !important;
+  margin: 1rem 0 !important;
+}
+
+/* Code */
+.richtext-content code {
+  background-color: #f3f4f6 !important;
+  padding: 0.125rem 0.5rem !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.875rem !important;
+  color: #dc2626 !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+.richtext-content pre {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  padding: 1rem !important;
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  margin: 1rem 0 !important;
+}
+
+.richtext-content pre code {
+  background-color: transparent !important;
+  color: #f3f4f6 !important;
+  padding: 0 !important;
+}
+
+/* Code block - Classes do Quill */
+.richtext-content .ql-code-block {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  padding: 1rem !important;
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  margin: 1rem 0 !important;
+  font-family: 'Courier New', monospace !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+/* Images */
+.richtext-content img {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  margin: 1rem 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Horizontal Rule */
+.richtext-content hr {
+  border: none !important;
+  border-top: 1px solid #d1d5db !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* Tables */
+.richtext-content table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1rem 0 !important;
+}
+
+.richtext-content th {
+  border: 1px solid #d1d5db !important;
+  background-color: #f3f4f6 !important;
+  padding: 0.75rem 1rem !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+}
+
+.richtext-content td {
+  border: 1px solid #d1d5db !important;
+  padding: 0.75rem 1rem !important;
+}
+
+/* Video embeds */
+.richtext-content .ql-video {
+  width: 100% !important;
+  height: 400px !important;
+  border-radius: 0.5rem !important;
+  margin: 1rem 0 !important;
+}
+
+/* Syntax highlighting para code-block */
+.richtext-content .ql-syntax {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-radius: 0.5rem !important;
+  padding: 1rem !important;
+  overflow-x: auto !important;
+  margin: 1rem 0 !important;
+}

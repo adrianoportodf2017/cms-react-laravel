@@ -185,7 +185,7 @@ class PageController extends Controller
             ->whereNull('parent_id')
             ->orderBy('display_order')
             ->with(['children' => function ($q) {
-                $q->where('status', 'published')->orderBy('display_order');
+                $q->where('in_main_menu', true)->where('status', 'published')->orderBy('display_order');
             }])
             ->get();
 

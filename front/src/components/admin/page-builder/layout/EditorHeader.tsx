@@ -1,5 +1,6 @@
+// src/components/admin/page-builder/layout/EditorHeader.tsx
 import React from 'react';
-import { ArrowLeft  } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export type PageStatus = 'draft' | 'published' | 'archived';
@@ -11,16 +12,9 @@ interface EditorHeaderProps {
   titleOverride?: string;
   authorName?: string | null;
 
-  // toggles de UI
-  showPreview: boolean;
-  showCodeEditor: boolean;
-  showOutline: boolean;
-  showComponentsPanel: boolean; // 🆕
-  onToggleCodeEditor: () => void;
-  onTogglePreview: () => void;
-  onToggleOutline: () => void;
-  onToggleComponentsPanel: () => void; // 🆕
-  onAddTailwindBlock: () => void;
+  // sidebar
+  showSidebar: boolean;
+  onToggleSidebar: () => void;
 }
 
 const statusLabel: Record<PageStatus, string> = {
@@ -40,13 +34,14 @@ const btn =
 const btnSm = 'px-3 py-1.5 text-sm';
 const btnGhost = 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50';
  
-
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
   status,
   isEditMode = false,
   titleOverride,
-  authorName
- }) => {
+  authorName,
+  showSidebar,
+  onToggleSidebar,
+}) => {
   const navigate = useNavigate();
 
   return (
@@ -81,9 +76,20 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             </div>
           </div>
 
-          {/* toggles principais */}
-          <div className="flex flex-wrap items-center gap-2">         
- 
+          {/* botão de configurações */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleSidebar}
+              className={`${btn} ${btnSm} ${
+                showSidebar 
+                  ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                  : `${btnGhost}`
+              }`}
+              aria-label="Alternar painel de configurações"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Configurações</span>
+            </button>
           </div>
         </div>
       </div>

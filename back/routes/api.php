@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AssociadoController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\MediaController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -100,8 +102,25 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::patch('/pages/{id}/publish', [PageController::class, 'publish'])->whereUuid('id');
     Route::patch('/pages/{id}/archive', [PageController::class, 'archive'])->whereUuid('id');
     Route::post('/pages/{id}/duplicate', [PageController::class, 'duplicate'])->whereUuid('id');
+
+  
+
+
 });
 
+Route::middleware(['auth:sanctum'])->group(function () {
 
+
+   Route::prefix('media')->group(function () {
+        Route::post('upload', [MediaController::class, 'upload']);
+        Route::get('/', [MediaController::class, 'index']);
+        Route::get('stats', [MediaController::class, 'stats']);
+        Route::get('orphaned', [MediaController::class, 'orphaned']);
+        Route::delete('clean-orphaned', [MediaController::class, 'cleanOrphaned']);
+        Route::get('{id}', [MediaController::class, 'show']);
+        Route::put('{id}', [MediaController::class, 'update']);
+        Route::delete('{id}', [MediaController::class, 'destroy']);
+    });
+});
 Route::get('/menu', [PageController::class, 'menu']);
 

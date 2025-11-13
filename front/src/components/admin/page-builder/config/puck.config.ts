@@ -5,7 +5,6 @@
 import type { ComponentConfig, Config } from '@measured/puck';
 import {
   HeroBlockConfig,
-  TextBlockConfig,
   ImageBlockConfig,
   CardGridBlockConfig,
   CTABlockConfig,
@@ -15,6 +14,9 @@ import {
 import { ContainerConfig } from '../config/container.config';
 import { ColumnsConfig } from '../config/colums.config';
 import { RichTextConfig } from '../config/richtext.config';
+import { DropdownConfig  } from '../config/accordion.config';
+import { ImageConfig  } from '../config/image.config';
+
 
 
 type FixedComponentConfig = ComponentConfig<any>;
@@ -32,13 +34,13 @@ export const puckConfig = createConfig({
     Container: ContainerConfig as FixedComponentConfig,
     Columns: ColumnsConfig as FixedComponentConfig,
     Hero: HeroBlockConfig as FixedComponentConfig,
-    Text: TextBlockConfig as FixedComponentConfig,
-    Image: ImageBlockConfig as FixedComponentConfig,
     CardGrid: CardGridBlockConfig as FixedComponentConfig,
     CTA: CTABlockConfig as FixedComponentConfig,
-    RichText: RichTextConfig as FixedComponentConfig,
+    Texto: RichTextConfig as FixedComponentConfig,
+    Dropdown: DropdownConfig as FixedComponentConfig,
     Spacer: SpacerBlockConfig as FixedComponentConfig,
     Divider: DividerBlockConfig as FixedComponentConfig,
+    Image: ImageConfig as FixedComponentConfig,
   },
   categories: {
     layout: {
@@ -47,7 +49,7 @@ export const puckConfig = createConfig({
       defaultExpanded: true,
     },
     content: {
-      components: ['Text', 'CTA', 'RichText'],
+      components: [ 'Texto', 'CTA', 'Dropdown', 'Image'],
       title: 'Conteúdo',
       defaultExpanded: true,
     },
@@ -69,7 +71,7 @@ export const puckConfig = createConfig({
  */
 export const initialData = {
   content: [],
-  root: { props: { title: 'Nova Página' } },
+  root: { props: { title: '' } },
 };
 
 /**
