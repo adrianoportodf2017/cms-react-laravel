@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@craftjs/core": "^0.2.12",
     "@tiptap/extension-color": "^3.9.1",
     "@tiptap/extension-highlight": "^3.10.5",
     "@tiptap/extension-image": "^3.9.1",
@@ -10,6 +11,10 @@
     "@tiptap/react": "^3.9.1",
     "@tiptap/starter-kit": "^3.9.1",
     "flowbite": "^3.1.2",
-    "flowbite-react": "^0.12.10"
+    "flowbite-react": "^0.12.10",
+    "re-resizable": "^6.11.2",
+    "react-color": "^2.19.3",
+    "react-contenteditable": "^3.3.7",
+    "styled-components": "^6.1.19"
   }
 }
