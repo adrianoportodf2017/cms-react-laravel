@@ -1,4 +1,4 @@
-import { PageBuilder }  from "../../../components/admin/page-builder-craft";
+import { PageBuilder }  from "../../../components/admin/page-builder-puck";
 
 export const PageBuilderPage = () => {
     return (

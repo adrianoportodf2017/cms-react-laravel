@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, Search, Archive, UploadCloud, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search, Archive, UploadCloud, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 // ✅ usa seus services já criados
 import {
@@ -24,6 +24,9 @@ interface PageItemFallback {
   created_at: string;
   updated_at: string;
 }
+
+type SortField = 'name' | 'slug' | 'status' | 'created_at' | 'updated_at';
+type SortDirection = 'asc' | 'desc';
 
 // Helper para extrair a lista de páginas, independente do formato de PagesListResponse
 function getItemsFromListResponse(resp: PagesListResponse): PageItemFallback[] {
@@ -62,6 +65,8 @@ export const PageList = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hardLoadingAction, setHardLoadingAction] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('updated_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Carrega lista
   useEffect(() => {
@@ -95,6 +100,36 @@ export const PageList = () => {
     setPage(1);
     await fetchPages();
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedPages = useMemo(() => {
+    return [...pages].sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      // Converte datas para timestamp para comparação
+      if (sortField === 'created_at' || sortField === 'updated_at') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+
+      // Converte strings para lowercase para comparação case-insensitive
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [pages, sortField, sortDirection]);
 
   const handleDelete = async (id: number | string) => {
     if (!confirm('Tem certeza que deseja excluir esta página?')) return;
@@ -161,6 +196,11 @@ export const PageList = () => {
 
   const isActing = (prefix: string, id: number | string) => hardLoadingAction === `${prefix}-${id}`;
 
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
+
   const emptyState = useMemo(() => (
     <div className="bg-white rounded-lg shadow-sm p-12 text-center">
       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -193,7 +233,7 @@ export const PageList = () => {
               <p className="text-gray-600 mt-1">Crie e gerencie as páginas do seu site</p>
             </div>
             <button
-              onClick={() => navigate('admin/pages/new')}
+              onClick={() => navigate('/admin/pages/new')}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm"
             >
               <Plus className="w-5 h-5" />
@@ -242,78 +282,139 @@ export const PageList = () => {
           emptyState
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pages.map((page) => (
-                <div
-                  key={String(page.id)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition overflow-hidden"
-                >
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1 truncate">{page.name}</h3>
-                        <p className="text-sm text-gray-600 truncate">/{page.slug}</p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${statusChip(page.status)}`}>
-                        {page.status === 'published' ? 'Publicado' : page.status === 'archived' ? 'Arquivado' : 'Rascunho'}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-gray-500 mb-4 space-y-1">
-                      <div>Criado em: {new Date(page.created_at).toLocaleDateString('pt-BR')}</div>
-                      <div>Atualizado em: {new Date(page.updated_at).toLocaleDateString('pt-BR')}</div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => window.open(`/${page.slug}`, '_blank')}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition"
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th
+                        onClick={() => handleSort('name')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
                       >
-                        <Eye className="w-4 h-4" />
-                        Ver
-                      </button>
-                      <button
-                        onClick={() => navigate(`/admin/pages/edit/${page.id}`)}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition"
+                        <div className="flex items-center gap-2">
+                          Nome
+                          <SortIcon field="name" />
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('slug')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
                       >
-                        <Edit className="w-4 h-4" />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDuplicate(page.id)}
-                        disabled={isActing('duplicate', page.id)}
-                        className="flex items-center justify-center gap-2 px-3 py-2 text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition disabled:opacity-60"
+                        <div className="flex items-center gap-2">
+                          Slug
+                          <SortIcon field="slug" />
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('status')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
                       >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      {page.status !== 'published' ? (
-                        <button
-                          onClick={() => handlePublish(page.id)}
-                          disabled={isActing('publish', page.id)}
-                          className="flex items-center justify-center gap-2 px-3 py-2 text-green-700 bg-green-50 rounded hover:bg-green-100 transition disabled:opacity-60"
-                        >
-                          <UploadCloud className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleArchive(page.id)}
-                          disabled={isActing('archive', page.id)}
-                          className="flex items-center justify-center gap-2 px-3 py-2 text-amber-700 bg-amber-50 rounded hover:bg-amber-100 transition disabled:opacity-60"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(page.id)}
-                        disabled={isActing('delete', page.id)}
-                        className="flex items-center justify-center gap-2 px-3 py-2 text-red-700 bg-red-50 rounded hover:bg-red-100 transition disabled:opacity-60"
+                        <div className="flex items-center gap-2">
+                          Status
+                          <SortIcon field="status" />
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('created_at')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                        <div className="flex items-center gap-2">
+                          Criado em
+                          <SortIcon field="created_at" />
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('updated_at')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          Atualizado em
+                          <SortIcon field="updated_at" />
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedPages.map((page) => (
+                      <tr key={String(page.id)} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{page.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">/{page.slug}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${statusChip(page.status)}`}>
+                            {page.status === 'published' ? 'Publicado' : page.status === 'archived' ? 'Arquivado' : 'Rascunho'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Date(page.created_at).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Date(page.updated_at).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => window.open(`/${page.slug}`, '_blank')}
+                              className="p-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition"
+                              title="Visualizar"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/admin/pages/edit/${page.id}`)}
+                              className="p-2 text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDuplicate(page.id)}
+                              disabled={isActing('duplicate', page.id)}
+                              className="p-2 text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition disabled:opacity-60"
+                              title="Duplicar"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            {page.status !== 'published' ? (
+                              <button
+                                onClick={() => handlePublish(page.id)}
+                                disabled={isActing('publish', page.id)}
+                                className="p-2 text-green-700 bg-green-50 rounded hover:bg-green-100 transition disabled:opacity-60"
+                                title="Publicar"
+                              >
+                                <UploadCloud className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleArchive(page.id)}
+                                disabled={isActing('archive', page.id)}
+                                className="p-2 text-amber-700 bg-amber-50 rounded hover:bg-amber-100 transition disabled:opacity-60"
+                                title="Arquivar"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(page.id)}
+                              disabled={isActing('delete', page.id)}
+                              className="p-2 text-red-700 bg-red-50 rounded hover:bg-red-100 transition disabled:opacity-60"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Pagination */}
