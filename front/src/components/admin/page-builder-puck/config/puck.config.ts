@@ -16,8 +16,7 @@ import { ColumnsConfig } from '../config/colums.config';
 import { RichTextConfig } from '../config/richtext.config';
 import { DropdownConfig  } from '../config/accordion.config';
 import { ImageConfig  } from '../config/image.config';
-
-
+import { CardConfig } from '../config/card.config';
 
 type FixedComponentConfig = ComponentConfig<any>;
 
@@ -41,6 +40,7 @@ export const puckConfig = createConfig({
     Spacer: SpacerBlockConfig as FixedComponentConfig,
     Divider: DividerBlockConfig as FixedComponentConfig,
     Image: ImageConfig as FixedComponentConfig,
+    Card: CardConfig as FixedComponentConfig,
   },
   categories: {
     layout: {
@@ -49,7 +49,7 @@ export const puckConfig = createConfig({
       defaultExpanded: true,
     },
     content: {
-      components: [ 'Texto', 'CTA', 'Dropdown', 'Image'],
+      components: [ 'Texto', 'CTA', 'Dropdown', 'Image', 'Card'],
       title: 'Conteúdo',
       defaultExpanded: true,
     },

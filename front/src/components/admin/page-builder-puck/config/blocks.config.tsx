@@ -264,7 +264,7 @@ export const HeroBlockConfig: ComponentConfig = {
         style={{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
       >
         <div className={`absolute inset-0 bg-black/${overlayOpacity}`} />
-        <div className={`relative z-10 container mx-auto px-4 flex flex-col ${alignmentClasses[alignment as keyof typeof alignmentClasses]}`}>
+        <div className={`relative z-10 container mx-auto flex flex-col ${alignmentClasses[alignment as keyof typeof alignmentClasses]}`}>
           <h1 className={`text-${titleFontSize} font-${titleFontWeight} text-${titleColor} mb-4 md:text-${titleFontSize === '5xl' ? '6xl' : '7xl'}`}>
             {title}
           </h1>
@@ -459,7 +459,7 @@ export const TextBlockConfig: ComponentConfig = {
     };
 
     return (
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-1">
         <div className={`${maxWidthClasses[maxWidth as keyof typeof maxWidthClasses]} mx-auto py-${paddingTop} pb-${paddingBottom} bg-${backgroundColor} rounded-${borderRadius}`}>
           <p className={`text-${fontSize} font-${fontWeight} text-${textColor} leading-${lineHeight} text-${alignment} whitespace-pre-wrap`}>
             {content}
@@ -674,7 +674,7 @@ export const ImageBlockConfig: ComponentConfig = {
     const heightClass = height === 'auto' ? 'h-auto' : `h-[${height}px]`;
 
     return (
-      <figure className={`container mx-auto px-4 py-${paddingTop} pb-${paddingBottom} ${widthClasses[width as keyof typeof widthClasses]} ${alignmentClasses[alignment as keyof typeof alignmentClasses]}`}>
+      <figure className={`container mx-auto px-1 py-${paddingTop} pb-${paddingBottom} ${widthClasses[width as keyof typeof widthClasses]} ${alignmentClasses[alignment as keyof typeof alignmentClasses]}`}>
         <div className="overflow-hidden">
           <img
             src={src}
@@ -753,7 +753,7 @@ export const CardGridBlockConfig: ComponentConfig = {
     };
 
     return (
-      <section className="container mx-auto px-4 py-12">
+      <section className="container mx-auto px-1 py-12">
         {title && (
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
             {title}
@@ -833,7 +833,7 @@ export const CTABlockConfig: ComponentConfig = {
 
     return (
       <section className={`${bgColors[backgroundColor as keyof typeof bgColors]} py-16`}>
-        <div className="container mx-auto px-4 text-center">
+        <div className="container mx-auto px-1 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             {title}
           </h2>
@@ -935,7 +935,7 @@ export const DividerBlockConfig: ComponentConfig = {
     };
 
     return (
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-1 py-4">
         <hr
           className={`${styles[style as keyof typeof styles]} ${thicknesses[thickness as keyof typeof thicknesses]} ${colors[color as keyof typeof colors]}`}
         />

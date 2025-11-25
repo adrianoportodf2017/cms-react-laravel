@@ -169,9 +169,9 @@ export const RichTextConfig: ComponentConfig<RichTextProps> = {
       <>
         <style>{generateResponsiveStyles(uniqueId, fontSize!, fontSizeMobile!, alignment!, alignmentMobile!)}</style>
 
-        <div className={`container mx-auto px-4 ${visibilityClasses}`}>
+        <div className={`container mx-auto  ${visibilityClasses}`}>
           <div 
-            className={`${uniqueId} ${customClasses || ''}`}
+            className={`${uniqueId} ' ' ${customClasses || ''}`}
             style={{
               width,
               maxWidth: maxWidth !== 'none' ? maxWidth : undefined,

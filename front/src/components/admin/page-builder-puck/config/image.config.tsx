@@ -29,8 +29,9 @@ export interface ImageProps {
     altText?: string;
     caption?: string;
     objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
-    imageWidth?: string; 
+    imageWidth?: string;
     imageHeight?: string;
+    imageAlignment?: 'left' | 'center' | 'right'; 
     imageBorderRadius?: string;
     linkUrl?: string;
     linkTarget?: '_self' | '_blank';
@@ -57,19 +58,19 @@ const createCroppedImage = async (
     return new Promise((resolve, reject) => {
         const image = new Image();
         image.src = imageSrc;
-        
+
         image.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
+
             if (!ctx) {
                 reject(new Error('Failed to get canvas context'));
                 return;
             }
-            
+
             canvas.width = croppedAreaPixels.width;
             canvas.height = croppedAreaPixels.height;
-            
+
             ctx.drawImage(
                 image,
                 croppedAreaPixels.x,
@@ -81,7 +82,7 @@ const createCroppedImage = async (
                 croppedAreaPixels.width,
                 croppedAreaPixels.height
             );
-            
+
             canvas.toBlob((blob) => {
                 if (blob) {
                     resolve(blob);
@@ -90,7 +91,7 @@ const createCroppedImage = async (
                 }
             }, 'image/jpeg', 0.95);
         };
-        
+
         image.onerror = () => reject(new Error('Failed to load image'));
     });
 };
@@ -131,7 +132,7 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                     try {
                         // Cria imagem cropada
                         const croppedBlob = await createCroppedImage(cropImage, croppedAreaPixels);
-                        
+
                         // Converte blob para file
                         const file = new File([croppedBlob], 'cropped-image.jpg', { type: 'image/jpeg' });
 
@@ -155,6 +156,38 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                     }
                 };
 
+                const handleUseOriginal = async () => {
+                    if (!cropImage) return;
+
+                    setUploading(true);
+                    setError(null);
+
+                    try {
+                        // Converte a URL do blob de volta para File
+                        const response = await fetch(cropImage);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'original-image.jpg', { type: 'image/jpeg' });
+
+                        // Faz upload do arquivo original
+                        const result = await uploadMutation.mutateAsync({
+                            file,
+                            category: 'page-builder',
+                        });
+
+                        if (result.success) {
+                            onChange(result.data.url);
+                            setShowCrop(false);
+                            setCropImage('');
+                        } else {
+                            setError('Erro ao fazer upload da imagem original');
+                        }
+                    } catch (err: any) {
+                        setError('Erro ao processar imagem original: ' + err.message);
+                    } finally {
+                        setUploading(false);
+                    }
+                };
+
                 const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
                     const file = event.target.files?.[0];
                     if (!file) return;
@@ -170,13 +203,34 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                         return;
                     }
 
-                    // Abre crop editor
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        setCropImage(reader.result as string);
+                    // ⚡ NOVA OPÇÃO: Upload direto sem crop
+                    // Para SVG ou se o usuário quiser pular o crop
+                    if (file.type === 'image/svg+xml') {
+                        // SVG não precisa de crop - upload direto
+                        setUploading(true);
+                        setError(null);
+
+                        try {
+                            const result = await uploadMutation.mutateAsync({
+                                file,
+                                category: 'page-builder',
+                            });
+
+                            if (result.success) {
+                                onChange(result.data.url);
+                            } else {
+                                setError('Erro ao fazer upload da imagem');
+                            }
+                        } catch (err: any) {
+                            setError('Erro ao fazer upload: ' + err.message);
+                        } finally {
+                            setUploading(false);
+                        }
+                    } else {
+                        // ⚡ MODIFICAÇÃO: Mostrar opções em vez de abrir crop automaticamente
+                        setCropImage(URL.createObjectURL(file));
                         setShowCrop(true);
-                    };
-                    reader.readAsDataURL(file);
+                    }
                 };
 
                 const handleRemove = () => {
@@ -248,7 +302,7 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Proporção
                                             </label>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 flex-wrap">
                                                 <button
                                                     type="button"
                                                     onClick={() => setAspectRatio(16 / 9)}
@@ -284,6 +338,13 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                                                 >
                                                     9:16
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAspectRatio(NaN)} // Proporção livre
+                                                    className={`px-3 py-1 text-sm rounded ${isNaN(aspectRatio) ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                                                >
+                                                    Livre
+                                                </button>
                                             </div>
                                         </div>
 
@@ -303,33 +364,45 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                                             />
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="flex gap-2 justify-end">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setShowCrop(false);
-                                                    setCropImage('');
-                                                }}
-                                                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                                            >
-                                                Cancelar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleCropSave}
-                                                disabled={uploading}
-                                                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-                                            >
-                                                {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
-                                                Salvar Crop
-                                            </button>
+                                        {/* ⚡ NOVO: Botões de ação melhorados */}
+                                        <div className="flex gap-2 justify-between">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleUseOriginal}
+                                                    disabled={uploading}
+                                                    className="px-4 py-2 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50 disabled:opacity-50 flex items-center gap-2"
+                                                >
+                                                    Usar Original
+                                                </button>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowCrop(false);
+                                                        setCropImage('');
+                                                    }}
+                                                    className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCropSave}
+                                                    disabled={uploading}
+                                                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                                                >
+                                                    {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                                    Aplicar Crop
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
-
                         {/* Preview ou Upload */}
                         {!value ? (
                             <div className="space-y-2">
@@ -368,7 +441,7 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
                                         type="button"
                                         onClick={handleCropExisting}
                                         className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-lg"
-                                        title="Recortar imagem"
+                                        title="Recortar imagem (opcional)"
                                     >
                                         <Crop className="w-4 h-4" />
                                     </button>
@@ -444,139 +517,314 @@ export const ImageConfig: ComponentConfig<ImageProps> = {
             },
         },
 
-// Adicione este campo no fields, logo após o campo imageUrl:
+   imageWidth: {
+    type: 'custom',
+    label: 'Largura da Imagem',
+    render: ({ value, onChange }) => {
+        // Parse do valor atual
+        const parseValue = (val: string) => {
+            if (!val || val === 'auto') return { number: 100, unit: '%' };
+            const match = val.match(/^(\d+(?:\.\d+)?)(px|%|vw|vh|em|rem)?$/);
+            if (match) {
+                return {
+                    number: parseFloat(match[1]),
+                    unit: match[2] || 'px'
+                };
+            }
+            return { number: 100, unit: '%' };
+        };
 
-imageWidth: {
-  type: 'custom',
-  label: 'Largura da Imagem',
-  render: ({ value, onChange }) => {
-    const [width, setWidth] = useState<number>(
-      value ? parseInt(value) : 100
-    );
+        const parsed = parseValue(value || '100%');
+        const [isAuto, setIsAuto] = useState(value === 'auto');
+        const [numberValue, setNumberValue] = useState(parsed.number);
+        const [unit, setUnit] = useState(parsed.unit);
 
-    const handleChange = (newWidth: number) => {
-      setWidth(newWidth);
-      onChange(`${newWidth}%`);
-    };
+        const handleToggle = (auto: boolean) => {
+            setIsAuto(auto);
+            if (auto) {
+                onChange('auto');
+            } else {
+                onChange(`${numberValue}${unit}`);
+            }
+        };
 
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700">
-            Largura: {width}%
-          </label>
-          <button
-            type="button"
-            onClick={() => handleChange(100)}
-            className="text-xs text-blue-600 hover:text-blue-700"
-          >
-            Reset
-          </button>
-        </div>
-        <input
-          type="range"
-          min="10"
-          max="100"
-          step="5"
-          value={width}
-          onChange={(e) => handleChange(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-        />
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>10%</span>
-          <span>50%</span>
-          <span>100%</span>
-        </div>
-      </div>
-    );
-  },
+        const handleNumberChange = (newValue: number) => {
+            setNumberValue(newValue);
+            onChange(`${newValue}${unit}`);
+        };
+
+        const handleInputChange = (val: string) => {
+            const num = parseFloat(val);
+            if (!isNaN(num) && num >= 0) {
+                setNumberValue(num);
+                onChange(`${num}${unit}`);
+            }
+        };
+
+        const handleUnitChange = (newUnit: string) => {
+            setUnit(newUnit);
+            onChange(`${numberValue}${newUnit}`);
+        };
+
+        return (
+            <div className="space-y-3">
+                {/* Toggle Auto/Manual */}
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handleToggle(true)}
+                        className={`flex-1 px-3 py-2 text-sm rounded transition ${
+                            isAuto 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        Auto
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleToggle(false)}
+                        className={`flex-1 px-3 py-2 text-sm rounded transition ${
+                            !isAuto 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        Manual
+                    </button>
+                </div>
+
+                {/* Manual Controls */}
+                {!isAuto && (
+                    <div className="space-y-3">
+                        {/* Input + Unit Selector */}
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={numberValue}
+                                onChange={(e) => handleInputChange(e.target.value)}
+                                min="0"
+                                step={unit === '%' ? '5' : '10'}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <select
+                                value={unit}
+                                onChange={(e) => handleUnitChange(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                            >
+                                <option value="px">px</option>
+                                <option value="%">%</option>
+                                <option value="vw">vw</option>
+                                <option value="vh">vh</option>
+                                <option value="em">em</option>
+                                <option value="rem">rem</option>
+                            </select>
+                        </div>
+
+                        {/* Slider (apenas para px e %) */}
+                        {(unit === 'px' || unit === '%') && (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs text-gray-600">
+                                        Ajuste rápido: {numberValue}{unit}
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleNumberChange(unit === '%' ? 100 : 300)}
+                                        className="text-xs text-blue-600 hover:text-blue-700"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
+                                <input
+                                    type="range"
+                                    min={unit === '%' ? '10' : '50'}
+                                    max={unit === '%' ? '100' : '1000'}
+                                    step={unit === '%' ? '5' : '10'}
+                                    value={numberValue}
+                                    onChange={(e) => handleNumberChange(Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                />
+                                {unit === '%' ? (
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>10%</span>
+                                        <span>50%</span>
+                                        <span>100%</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>50px</span>
+                                        <span>500px</span>
+                                        <span>1000px</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    },
+},
+
+imageAlignment: {
+    type: 'radio',
+    label: 'Alinhamento da Imagem',
+    options: [
+        { label: 'Esquerda', value: 'left' },
+        { label: 'Centro', value: 'center' },
+        { label: 'Direita', value: 'right' },
+    ],
 },
 
 imageHeight: {
-  type: 'custom',
-  label: 'Altura da Imagem',
-  render: ({ value, onChange }) => {
-    const [isAuto, setIsAuto] = useState(value === 'auto' || !value);
-    const [height, setHeight] = useState<number>(
-      value && value !== 'auto' ? parseInt(value) : 300
-    );
+    type: 'custom',
+    label: 'Altura da Imagem',
+    render: ({ value, onChange }) => {
+        // Parse do valor atual
+        const parseValue = (val: string) => {
+            if (!val || val === 'auto') return { number: 300, unit: 'px' };
+            const match = val.match(/^(\d+(?:\.\d+)?)(px|%|vh|vw|em|rem)?$/);
+            if (match) {
+                return {
+                    number: parseFloat(match[1]),
+                    unit: match[2] || 'px'
+                };
+            }
+            return { number: 300, unit: 'px' };
+        };
 
-    const handleToggle = (auto: boolean) => {
-      setIsAuto(auto);
-      if (auto) {
-        onChange('auto');
-      } else {
-        onChange(`${height}px`);
-      }
-    };
+        const parsed = parseValue(value || 'auto');
+        const [isAuto, setIsAuto] = useState(value === 'auto' || !value);
+        const [numberValue, setNumberValue] = useState(parsed.number);
+        const [unit, setUnit] = useState(parsed.unit);
 
-    const handleChange = (newHeight: number) => {
-      setHeight(newHeight);
-      onChange(`${newHeight}px`);
-    };
+        const handleToggle = (auto: boolean) => {
+            setIsAuto(auto);
+            if (auto) {
+                onChange('auto');
+            } else {
+                onChange(`${numberValue}${unit}`);
+            }
+        };
 
-    return (
-      <div className="space-y-3">
-        {/* Toggle Auto/Manual */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleToggle(true)}
-            className={`flex-1 px-3 py-2 text-sm rounded ${
-              isAuto 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Auto
-          </button>
-          <button
-            type="button"
-            onClick={() => handleToggle(false)}
-            className={`flex-1 px-3 py-2 text-sm rounded ${
-              !isAuto 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Manual
-          </button>
-        </div>
+        const handleNumberChange = (newValue: number) => {
+            setNumberValue(newValue);
+            onChange(`${newValue}${unit}`);
+        };
 
-        {/* Slider (apenas se não for auto) */}
-        {!isAuto && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700">
-                Altura: {height}px
-              </label>
-              <button
-                type="button"
-                onClick={() => handleChange(300)}
-                className="text-xs text-blue-600 hover:text-blue-700"
-              >
-                Reset
-              </button>
+        const handleInputChange = (val: string) => {
+            const num = parseFloat(val);
+            if (!isNaN(num) && num >= 0) {
+                setNumberValue(num);
+                onChange(`${num}${unit}`);
+            }
+        };
+
+        const handleUnitChange = (newUnit: string) => {
+            setUnit(newUnit);
+            onChange(`${numberValue}${newUnit}`);
+        };
+
+        return (
+            <div className="space-y-3">
+                {/* Toggle Auto/Manual */}
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handleToggle(true)}
+                        className={`flex-1 px-3 py-2 text-sm rounded transition ${
+                            isAuto 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        Auto
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleToggle(false)}
+                        className={`flex-1 px-3 py-2 text-sm rounded transition ${
+                            !isAuto 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        Manual
+                    </button>
+                </div>
+
+                {/* Manual Controls */}
+                {!isAuto && (
+                    <div className="space-y-3">
+                        {/* Input + Unit Selector */}
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={numberValue}
+                                onChange={(e) => handleInputChange(e.target.value)}
+                                min="0"
+                                step={unit === '%' ? '5' : '10'}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <select
+                                value={unit}
+                                onChange={(e) => handleUnitChange(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                            >
+                                <option value="px">px</option>
+                                <option value="%">%</option>
+                                <option value="vh">vh</option>
+                                <option value="vw">vw</option>
+                                <option value="em">em</option>
+                                <option value="rem">rem</option>
+                            </select>
+                        </div>
+
+                        {/* Slider (apenas para px e vh) */}
+                        {(unit === 'px' || unit === 'vh') && (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs text-gray-600">
+                                        Ajuste rápido: {numberValue}{unit}
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleNumberChange(unit === 'vh' ? 50 : 300)}
+                                        className="text-xs text-blue-600 hover:text-blue-700"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
+                                <input
+                                    type="range"
+                                    min={unit === 'vh' ? '10' : '100'}
+                                    max={unit === 'vh' ? '100' : '800'}
+                                    step={unit === 'vh' ? '5' : '50'}
+                                    value={numberValue}
+                                    onChange={(e) => handleNumberChange(Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                />
+                                {unit === 'vh' ? (
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>10vh</span>
+                                        <span>50vh</span>
+                                        <span>100vh</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>100px</span>
+                                        <span>400px</span>
+                                        <span>800px</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-            <input
-              type="range"
-              min="100"
-              max="800"
-              step="50"
-              value={height}
-              onChange={(e) => handleChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>100px</span>
-              <span>400px</span>
-              <span>800px</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  },
+        );
+    },
 },
 
 
@@ -595,15 +843,15 @@ imageHeight: {
             type: 'select',
             label: 'Ajuste da Imagem',
             options: [
+                 { label: 'Conter (contain)', value: 'contain' },
                 { label: 'Cobrir (cover)', value: 'cover' },
-                { label: 'Conter (contain)', value: 'contain' },
                 { label: 'Preencher (fill)', value: 'fill' },
                 { label: 'Nenhum', value: 'none' },
                 { label: 'Reduzir (scale-down)', value: 'scale-down' },
             ],
         },
 
-    
+
 
         imageBorderRadius: {
             type: 'text',
@@ -636,9 +884,10 @@ imageHeight: {
         imageUrl: '',
         altText: '',
         caption: '',
-        objectFit: 'cover',
-           imageWidth: '100%',
+        objectFit: 'contain',
+        imageWidth: '100%',
         imageHeight: 'auto',
+        imageAlignment: 'center',
         imageBorderRadius: '8px',
         linkUrl: '',
         linkTarget: '_self',
@@ -649,91 +898,102 @@ imageHeight: {
     },
 
     render: ({
-    imageUrl,
-    altText,
-    caption,
-    objectFit,
-    imageWidth,  // ✅ Adicione aqui
-    imageHeight,
-    imageBorderRadius,
-    linkUrl,
-    linkTarget,
-    hiddenMobile,
-    hiddenTablet,
-    hiddenDesktop,
-    margin,
-    padding,
-    width,
-    maxWidth,
-    backgroundColor,
-    borderRadius,
-    zIndex,
-    customClasses,
-}) => {
-    const visibilityClasses = getVisibilityClasses(hiddenMobile, hiddenTablet, hiddenDesktop);
-
-    const imageElement = (
-        <div
-            className={`image-wrapper ${visibilityClasses} ${customClasses || ''}`}
-            style={{
-                width,
-                maxWidth: maxWidth !== 'none' ? maxWidth : undefined,
-                marginTop: addUnit(margin?.top),
-                marginRight: addUnit(margin?.right),
-                marginBottom: addUnit(margin?.bottom),
-                marginLeft: addUnit(margin?.left),
-                paddingTop: addUnit(padding?.top),
-                paddingRight: addUnit(padding?.right),
-                paddingBottom: addUnit(padding?.bottom),
-                paddingLeft: addUnit(padding?.left),
-                backgroundColor,
-                borderRadius: addUnit(borderRadius),
-                zIndex: zIndex !== 'auto' ? zIndex : undefined,
-            }}
-        >
-            {imageUrl ? (
-                <>
-                    <img
-                        src={imageUrl}
-                        alt={altText || ''}
-                        style={{
-                            width: imageWidth || '100%',  // ✅ Usa imageWidth
-                            height: imageHeight,
-                            objectFit: objectFit as any,
-                            borderRadius: addUnit(imageBorderRadius),
-                            display: 'block',
-                            margin: '0 auto',  // ✅ Centraliza se menor que 100%
-                        }}
-                        loading="lazy"
-                    />
-                    {caption && (
-                        <p className="text-sm text-gray-600 mt-2 text-center italic">
+        imageUrl,
+        altText,
+        caption,
+        objectFit,
+        imageWidth,  // ✅ Adicione aqui
+        imageHeight,
+        imageBorderRadius,
+        imageAlignment,
+        linkUrl,
+        linkTarget,
+        hiddenMobile,
+        hiddenTablet,
+        hiddenDesktop,
+        margin,
+        padding,
+        width,
+        maxWidth,
+        backgroundColor,
+        borderRadius,
+        zIndex,
+        customClasses,
+    }) => {
+        const visibilityClasses = getVisibilityClasses(hiddenMobile, hiddenTablet, hiddenDesktop);
+   // ✅ Helper para calcular margin baseado no alinhamento
+    const getImageMargin = () => {
+        if (imageAlignment === 'left') return '0';
+        if (imageAlignment === 'right') return '0 0 0 auto';
+        return '0 auto'; // center (padrão)
+    };
+        const imageElement = (
+            <div
+                className={`image-wrapper ${visibilityClasses} ${customClasses || ''}`}
+                style={{
+                    width,
+                    maxWidth: maxWidth !== 'none' ? maxWidth : undefined,
+                    marginTop: addUnit(margin?.top),
+                    marginRight: addUnit(margin?.right),
+                    marginBottom: addUnit(margin?.bottom),
+                    marginLeft: addUnit(margin?.left),
+                    paddingTop: addUnit(padding?.top),
+                    paddingRight: addUnit(padding?.right),
+                    paddingBottom: addUnit(padding?.bottom),
+                    paddingLeft: addUnit(padding?.left),
+                    backgroundColor,
+                    borderRadius: addUnit(borderRadius),
+                    zIndex: zIndex !== 'auto' ? zIndex : undefined,
+                }}
+            >
+                {imageUrl ? (
+                    <>
+                        <img
+                            src={imageUrl}
+                            alt={altText || ''}
+                            style={{
+                                width: imageWidth || '100%',  // ✅ Usa imageWidth
+                                height: imageHeight,
+                                objectFit: objectFit as any,
+                                borderRadius: addUnit(imageBorderRadius),
+                                display: 'block',
+                                margin: getImageMargin(),    
+                            }}
+                            loading="lazy"
+                        />
+                        {caption && (
+                            <p 
+                            className="text-sm text-gray-600 mt-2 italic"
+                            style={{ 
+                                textAlign: imageAlignment || 'center' // ✅ Caption segue alinhamento
+                            }}
+                        >
                             {caption}
                         </p>
-                    )}
-                </>
-            ) : (
-                <div className="flex flex-col items-center justify-center h-48 bg-gray-100 rounded-lg">
-                    <ImageIcon className="w-12 h-12 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-500">Nenhuma imagem selecionada</span>
-                </div>
-            )}
-        </div>
-    );
-
-    if (linkUrl && imageUrl) {
-        return (
-            <a
-                href={linkUrl}
-                target={linkTarget}
-                rel={linkTarget === '_blank' ? 'noopener noreferrer' : undefined}
-                className="block"
-            >
-                {imageElement}
-            </a>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-48 bg-gray-100 rounded-lg">
+                        <ImageIcon className="w-12 h-12 text-gray-400 mb-2" />
+                        <span className="text-sm text-gray-500">Nenhuma imagem selecionada</span>
+                    </div>
+                )}
+            </div>
         );
-    }
 
-    return imageElement;
-},
+        if (linkUrl && imageUrl) {
+            return (
+                <a
+                    href={linkUrl}
+                    target={linkTarget}
+                    rel={linkTarget === '_blank' ? 'noopener noreferrer' : undefined}
+                    className="block"
+                >
+                    {imageElement}
+                </a>
+            );
+        }
+
+        return imageElement;
+    },
 };
