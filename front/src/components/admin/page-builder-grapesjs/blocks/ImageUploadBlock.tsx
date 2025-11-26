@@ -1,487 +1,319 @@
-// src/components/admin/page-builder-grapes/blocks/ImageUploadBlock.tsx
+// src/components/admin/page-builder-grapesjs/components/MediaManager.tsx
 
-import React, { useState, useRef, useCallback } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Upload, Loader2, Trash2, Crop, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
-import Cropper from 'react-easy-crop';
-import type { Area } from 'react-easy-crop';
+import React, { useState, useRef } from 'react';
+import { 
+  Upload, 
+  Loader2, 
+  Search, 
+  X, 
+  Image as ImageIcon,
+  Trash2,
+  Check
+} from 'lucide-react';
 import { toast } from 'sonner';
-
-import { useUploadMedia, useListarMedia } from '../../../../services/midias';
+import { useUploadMedia, useListarMedia, useDeletarMedia } from '../../../../services/midias';
 import { validarTipoArquivo, validarTamanhoArquivo } from '../../../../services/midias/api';
 
-// Helper para criar imagem cropada
-const createCroppedImage = async (
-  imageSrc: string,
-  croppedAreaPixels: Area
-): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.src = imageSrc;
-
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-
-      canvas.width = croppedAreaPixels.width;
-      canvas.height = croppedAreaPixels.height;
-
-      ctx.drawImage(
-        image,
-        croppedAreaPixels.x,
-        croppedAreaPixels.y,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height,
-        0,
-        0,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height
-      );
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create blob'));
-        }
-      }, 'image/jpeg', 0.95);
-    };
-
-    image.onerror = () => reject(new Error('Failed to load image'));
-  });
-};
-
-// Componente Modal de Upload (exportado para uso no Asset Manager)
-export const ImageUploadModalComponent = ({ 
-  onSelect, 
-  onClose 
-}: { 
-  onSelect: (url: string, complete?: boolean) => void; 
+interface MediaManagerProps {
+  onSelect: (url: string) => void;
   onClose: () => void;
+  allowMultiple?: boolean;
+}
+
+export const MediaManager: React.FC<MediaManagerProps> = ({ 
+  onSelect, 
+  onClose,
+  allowMultiple = false 
 }) => {
+  const [activeTab, setActiveTab] = useState<'upload' | 'gallery'>('gallery');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showCrop, setShowCrop] = useState(false);
-  const [cropImage, setCropImage] = useState<string>('');
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<number>(16 / 9);
-  const [activeTab, setActiveTab] = useState<'upload' | 'gallery'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Hooks
   const uploadMutation = useUploadMedia();
-  const { data: mediaList, isLoading: loadingGallery } = useListarMedia({
+  const deleteMutation = useDeletarMedia();
+  const { data: mediaList, isLoading, refetch } = useListarMedia({
     type: 'image',
-    per_page: 20,
+    per_page: 50,
+    search: searchTerm || undefined,
   });
 
-  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  const handleCropSave = async () => {
-    if (!cropImage || !croppedAreaPixels) return;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      const croppedBlob = await createCroppedImage(cropImage, croppedAreaPixels);
-      const file = new File([croppedBlob], 'cropped-image.jpg', { type: 'image/jpeg' });
-
-      const result = await uploadMutation.mutateAsync({
-        file,
-        category: 'page-builder',
-      });
-
-      if (result.success) {
-        onSelect(result.data.url);
-        toast.success('✅ Imagem enviada!');
-        onClose();
-      } else {
-        setError('Erro ao fazer upload');
-      }
-    } catch (err: any) {
-      setError('Erro ao processar: ' + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleUseOriginal = async () => {
-    if (!cropImage) return;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(cropImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'original-image.jpg', { type: 'image/jpeg' });
-
-      const result = await uploadMutation.mutateAsync({
-        file,
-        category: 'page-builder',
-      });
-
-      if (result.success) {
-        onSelect(result.data.url);
-        toast.success('✅ Imagem enviada!');
-        onClose();
-      } else {
-        setError('Erro ao fazer upload');
-      }
-    } catch (err: any) {
-      setError('Erro: ' + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
+  // Upload de arquivo
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    if (!validarTipoArquivo(file)) {
-      setError('Tipo não permitido. Use: JPG, PNG, GIF, WEBP ou SVG');
-      return;
-    }
+    setUploading(true);
 
-    if (!validarTamanhoArquivo(file, 5)) {
-      setError('Arquivo muito grande. Máximo: 5MB');
-      return;
-    }
+    try {
+      for (const file of files) {
+        // Validações
+        if (!validarTipoArquivo(file)) {
+          toast.error(`${file.name}: Tipo não permitido`);
+          continue;
+        }
 
-    if (file.type === 'image/svg+xml') {
-      // SVG: upload direto
-      setUploading(true);
-      setError(null);
+        if (!validarTamanhoArquivo(file, 5)) {
+          toast.error(`${file.name}: Arquivo muito grande (máx 5MB)`);
+          continue;
+        }
 
-      try {
+        // Upload
         const result = await uploadMutation.mutateAsync({
           file,
           category: 'page-builder',
         });
 
         if (result.success) {
-          onSelect(result.data.url);
-          toast.success('✅ SVG enviado!');
-          onClose();
-        } else {
-          setError('Erro ao fazer upload');
+          toast.success(`✅ ${file.name} enviado!`);
         }
-      } catch (err: any) {
-        setError('Erro: ' + err.message);
-      } finally {
-        setUploading(false);
       }
-    } else {
-      // Outras imagens: mostrar crop
-      setCropImage(URL.createObjectURL(file));
-      setShowCrop(true);
+
+      // Atualiza galeria e muda pra tab gallery
+      await refetch();
+      setActiveTab('gallery');
+    } catch (error: any) {
+      toast.error('Erro no upload: ' + error.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
-  if (showCrop) {
-    return (
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+  // Selecionar imagem
+  const handleImageClick = (url: string) => {
+    if (allowMultiple) {
+      const newSelected = new Set(selectedImages);
+      if (newSelected.has(url)) {
+        newSelected.delete(url);
+      } else {
+        newSelected.add(url);
+      }
+      setSelectedImages(newSelected);
+    } else {
+      onSelect(url);
+      onClose();
+    }
+  };
+
+  // Confirmar seleção múltipla
+  const handleConfirmMultiple = () => {
+    if (selectedImages.size > 0) {
+      // Por enquanto, pega a primeira
+      // Depois você pode adaptar pra inserir múltiplas
+      const firstUrl = Array.from(selectedImages)[0];
+      onSelect(firstUrl);
+      onClose();
+    }
+  };
+
+  // Deletar imagem
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Tem certeza que deseja deletar esta imagem?')) return;
+
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success('✅ Imagem deletada!');
+      refetch();
+    } catch (error) {
+      toast.error('Erro ao deletar imagem');
+    }
+  };
+
+  const medias = mediaList?.data?.data || [];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Recortar Imagem</h3>
+          <h3 className="text-lg font-semibold">Gerenciar Mídias</h3>
           <button
-            type="button"
-            onClick={() => {
-              setShowCrop(false);
-              setCropImage('');
-            }}
-            className="text-gray-500 hover:text-gray-700"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="relative h-96 bg-gray-900">
-          <Cropper
-            image={cropImage}
-            crop={crop}
-            zoom={zoom}
-            aspect={aspectRatio}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-          />
+        {/* Tabs */}
+        <div className="flex border-b">
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+              activeTab === 'gallery'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📂 Galeria ({medias.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+              activeTab === 'upload'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📤 Upload
+          </button>
         </div>
 
-        <div className="p-4 space-y-4 border-t">
-          <div>
-            <label className="block text-sm font-medium mb-2">Proporção</label>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { label: '16:9', value: 16 / 9 },
-                { label: '4:3', value: 4 / 3 },
-                { label: '1:1', value: 1 },
-                { label: '3:4', value: 3 / 4 },
-                { label: 'Livre', value: NaN },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => setAspectRatio(item.value)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    (isNaN(aspectRatio) && isNaN(item.value)) || aspectRatio === item.value
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeTab === 'upload' ? (
+            <div className="space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                id="media-upload"
+              />
+
+              <label
+                htmlFor="media-upload"
+                className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+              >
+                {uploading ? (
+                  <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                    <span className="text-sm font-medium text-gray-700">
+                      Clique para fazer upload ou arraste arquivos
+                    </span>
+                    <span className="text-xs text-gray-500 mt-2">
+                      PNG, JPG, GIF, WEBP, SVG (máx 5MB)
+                    </span>
+                    <span className="text-xs text-gray-500 mt-1">
+                      Aceita múltiplos arquivos
+                    </span>
+                  </>
+                )}
+              </label>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por título ou nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Zoom: {Math.round(zoom * 100)}%
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.1"
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
+              {/* Gallery Grid */}
+              {isLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                </div>
+              )}
 
-          <div className="flex gap-2 justify-between">
-            <button
-              type="button"
-              onClick={handleUseOriginal}
-              disabled={uploading}
-              className="px-4 py-2 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50 disabled:opacity-50"
-            >
-              Usar Original
-            </button>
+              {!isLoading && medias.length > 0 && (
+                <div className="grid grid-cols-4 gap-3">
+                  {medias.map((media) => (
+                    <button
+                      key={media.id}
+                      onClick={() => handleImageClick(media.url)}
+                      aria-pressed={selectedImages.has(media.url)}
+                      className={`relative group aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
+                        selectedImages.has(media.url)
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-transparent hover:border-blue-300'
+                      }`}
+                      type="button"
+                    >
+                      {/* Imagem */}
+                      <img
+                        src={media.url}
+                        alt={media.alt_text || media.title || 'Imagem'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
 
+                      {/* Info on hover (sem overlay preto) */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-xs font-medium text-white truncate">
+                          {media.title || media.filename}
+                        </p>
+                        <p className="text-xs text-white opacity-75">
+                          {(media.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+
+                      {/* Botão deletar */}
+                      <button
+                        onClick={(e) => handleDelete(media.id, e)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+
+                      {/* Check de seleção */}
+                      {selectedImages.has(media.url) && (
+                        <div className="absolute top-2 left-2 p-1 bg-blue-500 text-white rounded-full">
+                          <Check className="w-4 h-4" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!isLoading && medias.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <ImageIcon className="w-12 h-12 text-gray-300 mb-3" />
+                  <p className="text-gray-500 text-sm">
+                    {searchTerm ? 'Nenhuma imagem encontrada' : 'Nenhuma imagem na galeria'}
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('upload')}
+                    className="mt-3 text-blue-500 hover:text-blue-600 text-sm font-medium"
+                  >
+                    Fazer primeiro upload →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer - Só aparece se allowMultiple */}
+        {allowMultiple && selectedImages.size > 0 && (
+          <div className="border-t p-4 flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              {selectedImages.size} imagem(ns) selecionada(s)
+            </span>
             <div className="flex gap-2">
               <button
-                type="button"
-                onClick={() => {
-                  setShowCrop(false);
-                  setCropImage('');
-                }}
-                className="px-4 py-2 text-sm border rounded hover:bg-gray-50"
+                onClick={() => setSelectedImages(new Set())}
+                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 transition"
               >
-                Cancelar
+                Limpar
               </button>
               <button
-                type="button"
-                onClick={handleCropSave}
-                disabled={uploading}
-                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                onClick={handleConfirmMultiple}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
               >
-                {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Aplicar Crop
+                Inserir
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="text-lg font-semibold">Adicionar Imagem</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b">
-        <button
-          type="button"
-          onClick={() => setActiveTab('upload')}
-          className={`flex-1 px-4 py-3 text-sm font-medium ${
-            activeTab === 'upload'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          Upload
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('gallery')}
-          className={`flex-1 px-4 py-3 text-sm font-medium ${
-            activeTab === 'gallery'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          Galeria
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'upload' ? (
-          <div className="space-y-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              id="grapes-image-upload"
-            />
-
-            <label
-              htmlFor="grapes-image-upload"
-              className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
-            >
-              {uploading ? (
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-              ) : (
-                <>
-                  <Upload className="w-10 h-10 text-gray-400 mb-3" />
-                  <span className="text-sm font-medium text-gray-700">Clique para fazer upload</span>
-                  <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF, WEBP, SVG (máx 5MB)</span>
-                </>
-              )}
-            </label>
-
-            {error && (
-              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            {loadingGallery ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-              </div>
-            ) : mediaList?.data?.data && mediaList.data.data.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3">
-                {mediaList.data.data.map((media) => (
-                  <button
-                    key={media.id}
-                    type="button"
-                    onClick={() => {
-                      onSelect(media.url);
-                      toast.success('✅ Imagem selecionada!');
-                      onClose();
-                    }}
-                    className="relative aspect-square rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all group"
-                  >
-                    <img
-                      src={media.url}
-                      alt={media.alt_text || media.title || 'Imagem'}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p className="text-sm">Nenhuma imagem disponível</p>
-              </div>
-            )}
           </div>
         )}
       </div>
     </div>
   );
-};
-
-// Função para abrir o modal
-export const openImageUploadModal = (editor: any, component: any) => {
-  const modalContainer = document.createElement('div');
-  modalContainer.className = 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4';
-  document.body.appendChild(modalContainer);
-
-  const root = createRoot(modalContainer);
-
-  const handleSelect = (url: string) => {
-    // CRITICAL: Valida que é URL e não base64
-    if (url.startsWith('data:image')) {
-      toast.error('Erro: Imagem não foi enviada corretamente');
-      return;
-    }
-
-    // Atualiza atributos da imagem
-    component.set({
-      src: url,
-      // Remove qualquer base64 anterior
-      attributes: {
-        ...component.getAttributes(),
-        src: url,
-      }
-    });
-
-    // Força update
-    component.view.render();
-    
-    console.log('✅ Imagem atualizada com URL:', url);
-    
-    // Fecha o modal
-    root.unmount();
-    document.body.removeChild(modalContainer);
-  };
-
-  const handleClose = () => {
-    root.unmount();
-    document.body.removeChild(modalContainer);
-  };
-
-  root.render(<ImageUploadModalComponent onSelect={handleSelect} onClose={handleClose} />);
-};
-
-// Registra o bloco no GrapesJS
-export const registerImageUploadBlock = (editor: any) => {
-  editor.BlockManager.add('image-upload-cooperforte', {
-    label: 'Imagem Upload',
-    category: 'Cooperforte',
-    media: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>',
-    content: {
-      type: 'image',
-      activeOnRender: 1,
-    },
-  });
-
-  // Hook: quando clica no componente image, abre o modal
-  editor.on('component:selected', (component: any) => {
-    if (component.get('type') === 'image') {
-      // Adiciona botão "Upload" no toolbar
-      const toolbar = component.get('toolbar');
-      const hasUploadButton = toolbar.some((btn: any) => btn.id === 'upload-image');
-      
-      if (!hasUploadButton) {
-        component.set('toolbar', [
-          ...toolbar,
-          {
-            id: 'upload-image',
-            label: '📤',
-            command: () => openImageUploadModal(editor, component),
-            attributes: { title: 'Upload/Galeria' },
-          },
-        ]);
-      }
-    }
-  });
 };

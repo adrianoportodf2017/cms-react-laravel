@@ -1,24 +1,44 @@
+// src/components/admin/page-builder-grapesjs/hooks/useGrapesEditor.ts
+
 import { useEffect, useState, useRef } from 'react';
-
 import { toast } from 'sonner';
-import { registerImageUploadBlock } from '../blocks/ImageUploadBlock';
+import type { GrapesJSEditor } from '../types/editor.types';
 
+// Services
+import { useUploadMedia, useListarMedia, useDeletarMedia } from '../../../../services/midias';
+import { validarTipoArquivo, validarTamanhoArquivo } from '../../../../services/midias/api';
 
-declare global {
-  interface Window {
-    require: any;
-    monaco: any;
-    monacoInstance: any;
-  }
-}
+// Configs
+import { setupDeviceButtons, hideNativeDeviceSelector } from '../config/devices.config';
+import { setupMonacoEditor } from '../config/monaco.config';
+import {
+  createCustomCssPlugin,
+  setupTailwindInIframe,
+  setupComponentSelection,
+  patchProjectData
+} from '../config/styles.config';
+import { removeUnnecessaryButtons, escapeName } from '../utils/ui.utils';
+import {
+  setupMediaManagerCommand,
+  setupImageComponentIntegration
+} from '../config/mediaManager.config';
 
 export const useGrapesEditor = () => {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<GrapesJSEditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+
+  // Mutations
+  const uploadMutation = useUploadMedia();
+  const deleteMutation = useDeletarMedia();
+  const { refetch: refetchMedia } = useListarMedia({
+    type: 'image',
+    status: 'active',
+    per_page: 100,
+  });
 
   useEffect(() => {
     let isMounted = true;
-    let editor: any = null;
+    let editor: GrapesJSEditor | null = null;
 
     const initializeEditor = async () => {
       try {
@@ -36,47 +56,95 @@ export const useGrapesEditor = () => {
         const tailwindPluginModule = await import('grapesjs-tailwind');
         const tailwindPlugin = tailwindPluginModule.default || tailwindPluginModule;
 
+        // Importa plugin de blocos básicos
+        const blocksBasicModule = await import('grapesjs-blocks-basic');
+        const blocksBasic = blocksBasicModule.default || blocksBasicModule;
+
         if (!isMounted) return;
 
-        const customCssPlugin = (editor: any) => {
-          const originalToHtml = editor.CssComposer.getAllToHtml;
-
-          editor.CssComposer.getAllToHtml = function() {
-            const originalCss = originalToHtml.call(this);
-
-            return originalCss.replace(/\.([a-zA-Z0-9_-]+)\s*\{/g, (match: string, className: string) => {
-              const components = editor.getWrapper().find(`.${className}`);
-              if (components && components.length > 0) {
-                const component = components[0];
-                let componentId = component.getId();
-                if (!componentId) {
-                  componentId = `gjs-auto-${Math.random().toString(36).substr(2, 9)}`;
-                  component.setId(componentId);
-                }
-                return `#${componentId} {`;
-              }
-              return match;
-            });
-          };
-        };
-
-        const escapeName = (name: string) => `${name}`.trim().replace(/([^a-z0-9\w-:/]+)/gi, '-');
+        const customCssPlugin = createCustomCssPlugin();
 
         editor = grapesjs.init({
           container: '#gjs',
           height: '100vh',
           fromElement: true,
           storageManager: false,
-          
-          selectorManager: { 
+
+          selectorManager: {
             escapeName,
             componentFirst: true,
           },
-          
-          forceClass: false, 
+
+          forceClass: false,
           avoidInlineStyle: true,
-          plugins: [tailwindPlugin, customCssPlugin],
+
+          assetManager: {
+            upload: 'auto',
+            assets: [],
+            
+            uploadFile: async function (e: any) {
+              if (e.preventDefault) e.preventDefault();
+
+              const files = e.dataTransfer ? e.dataTransfer.files : e.target?.files;
+              if (!files || files.length === 0) return;
+
+              const currentEditor = editor;
+              if (!currentEditor) return;
+
+              const uploadedAssets: any[] = [];
+
+              for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                if (!validarTipoArquivo(file) || !validarTamanhoArquivo(file)) {
+                  toast.error(`Arquivo inválido: ${file.name}`);
+                  continue;
+                }
+
+                try {
+                  toast.loading(`Enviando ${file.name}...`, { id: 'upload-toast' });
+
+                  const response = await uploadMutation.mutateAsync({ file });
+                  const media = response.data;
+
+                  uploadedAssets.push({
+                    src: media.url,
+                    type: 'image',
+                    name: media.title || media.filename,
+                    height: media.height,
+                    width: media.width,
+                    id: String(media.id)
+                  });
+
+                  toast.dismiss('upload-toast');
+                  toast.success('Upload concluído!');
+
+                } catch (err) {
+                  console.error(err);
+                  toast.dismiss('upload-toast');
+                  toast.error(`Erro ao enviar ${file.name}`);
+                }
+              }
+
+              if (uploadedAssets.length > 0) {
+                currentEditor.AssetManager.add(uploadedAssets);
+                await refetchMedia();
+              }
+            }
+          },
+
+          plugins: [
+            blocksBasic,
+            tailwindPlugin, 
+            customCssPlugin
+          ],
+
           pluginsOpts: {
+            [blocksBasic]: {
+              flexGrid: true,
+              blocks: ['column1', 'column2', 'column3', 'column3-7', 'text', 'link', 'image', 'video', 'map'],
+              category: 'Básico',
+            },
             'grapesjs-tailwind': {
               tailwindPlayCdn: 'https://cdn.tailwindcss.com',
               tailwindConfig: {
@@ -89,9 +157,11 @@ export const useGrapesEditor = () => {
                 }
               },
               loadBlocks: true,
-              changeThemeText: 'Alterar Tema'
+              changeThemeText: 'Alterar Tema',
+              category: 'Tailwind',
             }
           },
+
           deviceManager: {
             devices: [
               { id: 'desktop', name: 'Desktop', width: '' },
@@ -99,310 +169,82 @@ export const useGrapesEditor = () => {
               { id: 'mobile', name: 'Mobile', width: '375px' },
             ],
           },
+
           canvas: {
             styles: ['https://cdn.tailwindcss.com'],
           },
         });
 
-        editor.on('load', () => {
+        editor.on('load', async () => {
           console.log('✅ Editor carregado');
-        registerImageUploadBlock(editor);
 
-          // REMOVE BOTÕES DUPLICADOS
-          const panelManager = editor.Panels;
+          if (!editor) return;
+
+          removeUnnecessaryButtons(editor);
+          hideNativeDeviceSelector();
+          setupDeviceButtons(editor);
+          setupComponentSelection(editor);
+          patchProjectData(editor);
+          setupTailwindInIframe(editor);
+          setupMonacoEditor(editor);
+          setupMediaManagerCommand(editor);
+          setupImageComponentIntegration(editor);
+
+          // Reordena categorias de blocos
+          const blockManager = editor.BlockManager;
+          const categories = blockManager.getCategories();
           
-          // Remove botões nativos duplicados
-          panelManager.removeButton('options', 'export-template');
-          panelManager.removeButton('options', 'gjs-open-import-webpage');
-          panelManager.removeButton('options', 'preview');
-          panelManager.removeButton('options', 'fullscreen');
-          
-          // ESCONDE O SELECT NATIVO DE DEVICES
-          setTimeout(() => {
-            const devicesContainer = document.querySelector('.gjs-devices-c');
-            if (devicesContainer) {
-              (devicesContainer as HTMLElement).style.display = 'none';
-            }
-          }, 100);
-          
-          // ADICIONA BOTÕES CUSTOMIZADOS COM ÍCONES
-          const optionsPanel = panelManager.getPanel('options');
-          
-          // Comandos dos devices
-          editor.Commands.add('set-device-desktop', { 
-            run: (ed: any) => {
-              ed.setDevice('Desktop');
-              // Atualiza visual dos botões
-              document.querySelectorAll('[data-device-btn]').forEach(btn => {
-                btn.classList.remove('gjs-pn-active');
-              });
-              document.querySelector('[data-device-btn="desktop"]')?.classList.add('gjs-pn-active');
-            }
-          });
-          
-          editor.Commands.add('set-device-tablet', { 
-            run: (ed: any) => {
-              ed.setDevice('Tablet');
-              document.querySelectorAll('[data-device-btn]').forEach(btn => {
-                btn.classList.remove('gjs-pn-active');
-              });
-              document.querySelector('[data-device-btn="tablet"]')?.classList.add('gjs-pn-active');
-            }
-          });
-          
-          editor.Commands.add('set-device-mobile', { 
-            run: (ed: any) => {
-              ed.setDevice('Mobile');
-              document.querySelectorAll('[data-device-btn]').forEach(btn => {
-                btn.classList.remove('gjs-pn-active');
-              });
-              document.querySelector('[data-device-btn="mobile"]')?.classList.add('gjs-pn-active');
+          categories.each((category: any) => {
+            const categoryId = category.get('id');
+            if (categoryId === 'Básico') {
+              category.set('order', 0);
+            } else if (categoryId === 'Tailwind') {
+              category.set('order', 1);
             }
           });
 
-          // Adiciona botões no painel options
-          optionsPanel.get('buttons').add([
-            {
-              id: 'set-device-desktop',
-              command: 'set-device-desktop',
-              className: 'fa fa-desktop',
-              active: true,
-              attributes: { 
-                title: 'Desktop',
-                'data-device-btn': 'desktop'
-              },
-            },
-            {
-              id: 'set-device-tablet',
-              command: 'set-device-tablet',
-              className: 'fa fa-tablet',
-              attributes: { 
-                title: 'Tablet',
-                'data-device-btn': 'tablet'
-              },
-            },
-            {
-              id: 'set-device-mobile',
-              command: 'set-device-mobile',
-              className: 'fa fa-mobile',
-              attributes: { 
-                title: 'Mobile',
-                'data-device-btn': 'mobile'
-              },
-            },
-          ]);
-          
-          // *** FORÇA O SELECTOR MANAGER A USAR O ID ***
-          editor.on('component:selected', (component: any) => {
-            setTimeout(() => {
-              if (!component || !component.getId) return;
+          editor.on('asset:open', async () => {
+            try {
+              const res = await refetchMedia();
+              const serverMedia = res.data?.data.data || [];
 
-              let componentId = component.getId();
-              
-              if (!componentId) {
-                componentId = `gjs-auto-${Math.random().toString(36).substr(2, 9)}`;
-                component.setId(componentId);
-              }
-  
-              const selectorManager = editor.SelectorManager;
-              
-              const idSelector = selectorManager.add({
-                name: componentId,
-                label: `#${componentId}`,
-                type: 2,
-                private: false
-              });
-  
-              selectorManager.setSelected([idSelector]);
-              
-              console.log(`🎯 Focado no ID: #${componentId}`);
-            }, 10);
+              const assets = serverMedia
+                .filter((m: any) => m.type === 'image')
+                .map((m: any) => ({
+                  src: m.url,
+                  type: 'image',
+                  name: m.title || m.filename,
+                  height: m.height,
+                  width: m.width,
+                  id: String(m.id)
+                }));
+
+              editor?.AssetManager.getAll().reset();
+              editor?.AssetManager.add(assets);
+            } catch (e) {
+              console.error('Erro ao carregar assets', e);
+            }
           });
 
-          // PATCH DO PROJECT DATA
-          const originalGetProjectData = editor.getProjectData.bind(editor);
-          
-          editor.getProjectData = function() {
-            const data = originalGetProjectData();
-            if (data.styles) {
-              data.styles = data.styles.map((style: any) => {
-                if (style.selectors && style.selectors.length > 0) {
-                  const hasClassSelector = style.selectors.some((s: any) => s.type === 'class' || !s.type); 
-                  
-                  if (hasClassSelector) {
-                    const className = style.selectors[0].name;
-                    const wrapper = editor.getWrapper();
-                    const components = wrapper.find(`.${className}`);
-                    
-                    if (components && components.length > 0) {
-                      const component = components[0];
-                      let componentId = component.getId();
-                      
-                      if (!componentId) {
-                        componentId = `gjs-save-${Math.random().toString(36).substr(2, 9)}`;
-                        component.setId(componentId);
-                      }
-
-                      return {
-                        ...style,
-                        selectors: [{ 
-                          name: componentId, 
-                          type: 'id',
-                          active: true,
-                          private: false
-                        }]
-                      };
-                    }
-                  }
-                }
-                return style;
-              });
-              console.log('💾 ProjectData: Classes → IDs');
+          editor.on('asset:remove', async (asset: any) => {
+            const id = asset.get('id');
+            if (id) {
+              try {
+                await deleteMutation.mutateAsync(Number(id));
+                toast.success('Mídia removida');
+              } catch (e) {
+                console.error(e);
+              }
             }
-            return data;
-          };
+          });
 
-          // Tailwind no iframe
-          const iframe = editor.Canvas.getFrameEl();
-          if (iframe) {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (iframeDoc) {
-              const tailwindScript = iframeDoc.createElement('script');
-              tailwindScript.src = 'https://cdn.tailwindcss.com';
-              iframeDoc.head.appendChild(tailwindScript);
-
-              const configScript = iframeDoc.createElement('script');
-              configScript.textContent = `
-                tailwind.config = {
-                  theme: {
-                    extend: {
-                      colors: {
-                        cooperforte: { primary: '#1e40af', secondary: '#7e22ce' }
-                      }
-                    }
-                  }
-                }
-              `;
-              iframeDoc.head.appendChild(configScript);
-            }
-          }
-        });
-
-        // *** MONACO EDITOR (ÚNICO) ***
-        editor.Commands.add('open-code', {
-          run: (editor: any) => {
-            const modal = editor.Modal;
-            const html = editor.getHtml();
-            const css = editor.getCss(); 
-            const code = `${html}\n<style>\n${css}\n</style>`;
-
-            modal.setTitle('✨ Editar Código (Monaco Editor)');
-            modal.setContent(`
-              <div style="display: flex; flex-direction: column; height: 80vh;">
-                <div style="padding: 10px; background: #1e1e1e; border-bottom: 1px solid #333;">
-                  <p style="margin: 0; font-size: 14px; color: #d4d4d4;">
-                    💡 CSS com IDs únicos | Tailwind suportado | Ctrl+F para buscar
-                  </p>
-                </div>
-                <div style="flex: 1; overflow: hidden; position: relative;">
-                  <div id="monaco-container" style="width: 100%; height: 100%;">Carregando Monaco Editor...</div>
-                </div>
-                <div style="padding: 10px; border-top: 1px solid #333; display: flex; gap: 10px; justify-content: flex-end; background: #1e1e1e;">
-                  <button id="cancel-code" style="padding: 8px 16px; background: #4b5563; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                    Cancelar
-                  </button>
-                  <button id="save-code" style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                    💾 Salvar e Aplicar
-                  </button>
-                </div>
-              </div>
-            `);
-            modal.open();
-
-            const loadMonaco = () => {
-              const initEditor = () => {
-                if (window.monaco) {
-                  if (window.monacoInstance) {
-                    window.monacoInstance.dispose();
-                  }
-
-                  const container = document.getElementById('monaco-container');
-                  if (container) {
-                    container.innerHTML = '';
-                    window.monacoInstance = window.monaco.editor.create(container, {
-                      value: code,
-                      language: 'html',
-                      theme: 'vs-dark',
-                      automaticLayout: true,
-                      minimap: { enabled: false },
-                      fontSize: 14,
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                      formatOnPaste: true,
-                      formatOnType: true,
-                    });
-                  }
-                }
-              };
-
-              if (window.monaco) {
-                initEditor();
-                return;
-              }
-
-              const script = document.createElement('script');
-              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
-              script.onload = () => {
-                window.require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
-                window.require(['vs/editor/editor.main'], () => {
-                  initEditor();
-                });
-              };
-              document.body.appendChild(script);
-            };
-
-            setTimeout(() => {
-              loadMonaco();
-
-              const saveBtn = document.getElementById('save-code');
-              const cancelBtn = document.getElementById('cancel-code');
-
-              if (saveBtn) {
-                saveBtn.onclick = () => {
-                  const newCode = window.monacoInstance ? window.monacoInstance.getValue() : '';
-                  
-                  const styleMatch = newCode.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-                  const htmlSemStyle = newCode.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-
-                  editor.setComponents(htmlSemStyle.trim());
-                  if (styleMatch && styleMatch[1]) {
-                    editor.setStyle(styleMatch[1].trim());
-                  }
-                  modal.close();
-                  toast.success('✅ Código atualizado!');
-                };
-              }
-              if (cancelBtn) {
-                cancelBtn.onclick = () => {
-                  modal.close();
-                };
-              }
-            }, 100);
-          },
-        });
-
-        // ADICIONA SÓ O BOTÃO DO MONACO
-        editor.Panels.addButton('options', {
-          id: 'open-code',
-          className: 'fa fa-code',
-          command: 'open-code',
-          attributes: { title: 'Editar Código (Monaco)' },
+          console.log('🖼️ Media Manager configurado');
         });
 
         if (isMounted) {
           editorRef.current = editor;
           setIsEditorReady(true);
-          console.log('🎉 Editor pronto com UI limpa!');
+          console.log('🎉 Editor pronto');
         }
       } catch (error) {
         console.error('❌ Erro:', error);
@@ -417,9 +259,14 @@ export const useGrapesEditor = () => {
     return () => {
       isMounted = false;
       if (editor) {
-        try { editor.destroy(); } catch (e) {}
+        try {
+          editor.destroy();
+        } catch (e) {
+          console.warn('Erro ao destruir editor:', e);
+        }
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { editorRef, isEditorReady };
