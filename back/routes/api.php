@@ -124,3 +124,37 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 Route::get('/menu', [PageController::class, 'menu']);
 
+
+/*
+|--------------------------------------------------------------------------
+| Rotas de Associados PÚBLICAS (Formulário do Site)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('throttle:10,1')->group(function () {
+    // Cadastro público (formulário do site)
+    Route::post('/associados/public', [AssociadoController::class, 'storePublic']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rotas de Associados PRIVADAS (Painel Admin)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    // Listar associados (com filtros e paginação)
+    Route::get('/associados', [AssociadoController::class, 'index']);
+    
+    // Criar associado via admin
+    Route::post('/associados', [AssociadoController::class, 'storePrivate']);
+    
+    // Ver detalhes de um associado
+    Route::get('/associados/{id}', [AssociadoController::class, 'show']);
+    
+    // Atualizar associado
+    Route::put('/associados/{id}', [AssociadoController::class, 'update']);
+    
+    // Deletar associado (soft delete)
+    Route::delete('/associados/{id}', [AssociadoController::class, 'destroy']);
+});
+
+

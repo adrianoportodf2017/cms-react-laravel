@@ -43,7 +43,7 @@ class AssociadoSeeder extends Seeder
                 'Numero' => '456',
                 'Complemento' => 'Casa',
                 'Bairro' => 'Asa Norte',
-                'Cidade' => 'Brasília',
+                'Cidade'=> 'São Paulo',
                 'Uf' => 'DF',
                 'Motivo' => 'Interesse em fazer parte da organização.',
                 'Status' => 'Pendente',

@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, Search, Archive, UploadCloud, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { 
+  Plus, Edit, Trash2, Eye, Search, Archive, UploadCloud, Copy, 
+  ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, Folder, File, 
+  ChevronDown, ChevronUp, List, FolderTree 
+} from 'lucide-react';
 
-// ✅ usa seus services já criados
 import {
   ListarPaginas,
   DeletarPagina,
@@ -11,11 +14,8 @@ import {
   DuplicarPagina,
 } from '../../../services/pages/api';
 
-// ✅ usa seus types já existentes
 import type { PagesListResponse } from '../../../types/page-builder.types';
 
-// Caso você já tenha um tipo de item de página exportado, use-o aqui.
-// Senão, este fallback garante compatibilidade com os campos usados no componente.
 interface PageItemFallback {
   id: number | string;
   name: string;
@@ -23,27 +23,30 @@ interface PageItemFallback {
   status: 'draft' | 'published' | 'archived';
   created_at: string;
   updated_at: string;
+  parent_id?: number | string | null;
+  display_order?: number;
 }
 
-type SortField = 'name' | 'slug' | 'status' | 'created_at' | 'updated_at';
+type SortField = 'name' | 'slug' | 'status' | 'created_at' | 'updated_at' | 'display_order';
 type SortDirection = 'asc' | 'desc';
+type ViewMode = 'flat' | 'hierarchical';
 
-// Helper para extrair a lista de páginas, independente do formato de PagesListResponse
+interface PageTreeNode extends PageItemFallback {
+  children: PageTreeNode[];
+  level: number;
+  breadcrumb: string[];
+}
+
+// Helper para extrair a lista de páginas
 function getItemsFromListResponse(resp: PagesListResponse): PageItemFallback[] {
-  // Tenta resp.data como array
   const maybeArray = (resp as any)?.data;
   if (Array.isArray(maybeArray)) return maybeArray as PageItemFallback[];
-
-  // Alguns backends usam resp.items
   if (Array.isArray((resp as any)?.items)) return (resp as any).items as PageItemFallback[];
-
-  // Ou resp.results
   if (Array.isArray((resp as any)?.results)) return (resp as any).results as PageItemFallback[];
-
   return [];
 }
 
-// Helper para paginação a partir do response
+// Helper para paginação
 function getPaginationFromListResponse(resp: PagesListResponse) {
   const meta = (resp as any)?.meta ?? (resp as any)?.pagination ?? {};
   return {
@@ -65,8 +68,10 @@ export const PageList = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hardLoadingAction, setHardLoadingAction] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>('updated_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>('display_order');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [viewMode, setViewMode] = useState<ViewMode>('hierarchical');
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string | number>>(new Set());
 
   // Carrega lista
   useEffect(() => {
@@ -110,26 +115,114 @@ export const PageList = () => {
     }
   };
 
-  const sortedPages = useMemo(() => {
-    return [...pages].sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
+  // Constrói árvore hierárquica
+  const buildTree = (items: PageItemFallback[]): PageTreeNode[] => {
+    const map = new Map<string | number, PageTreeNode>();
+    const roots: PageTreeNode[] = [];
 
-      // Converte datas para timestamp para comparação
-      if (sortField === 'created_at' || sortField === 'updated_at') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
-      }
-
-      // Converte strings para lowercase para comparação case-insensitive
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+    // Primeiro, cria todos os nós
+    items.forEach((item) => {
+      map.set(item.id, {
+        ...item,
+        children: [],
+        level: 0,
+        breadcrumb: [],
+      });
     });
-  }, [pages, sortField, sortDirection]);
+
+    // Depois, organiza a hierarquia
+    items.forEach((item) => {
+      const node = map.get(item.id)!;
+      
+      if (!item.parent_id) {
+        roots.push(node);
+      } else {
+        const parent = map.get(item.parent_id);
+        if (parent) {
+          node.level = parent.level + 1;
+          node.breadcrumb = [...parent.breadcrumb, parent.name];
+          parent.children.push(node);
+        } else {
+          // Pai não encontrado, adiciona como raiz
+          roots.push(node);
+        }
+      }
+    });
+
+    // Ordena por display_order
+    const sortByOrder = (nodes: PageTreeNode[]) => {
+      nodes.sort((a, b) => {
+        const orderA = a.display_order ?? 999;
+        const orderB = b.display_order ?? 999;
+        return orderA - orderB;
+      });
+      nodes.forEach(node => {
+        if (node.children.length > 0) {
+          sortByOrder(node.children);
+        }
+      });
+    };
+
+    sortByOrder(roots);
+    return roots;
+  };
+
+  // Flatten tree para exibição
+  const flattenTree = (nodes: PageTreeNode[]): PageTreeNode[] => {
+    const result: PageTreeNode[] = [];
+    
+    const traverse = (node: PageTreeNode) => {
+      result.push(node);
+      if (!collapsedNodes.has(node.id) && node.children.length > 0) {
+        node.children.forEach(child => traverse(child));
+      }
+    };
+
+    nodes.forEach(node => traverse(node));
+    return result;
+  };
+
+  // Toggle collapse
+  const toggleCollapse = (id: string | number) => {
+    const newCollapsed = new Set(collapsedNodes);
+    if (newCollapsed.has(id)) {
+      newCollapsed.delete(id);
+    } else {
+      newCollapsed.add(id);
+    }
+    setCollapsedNodes(newCollapsed);
+  };
+
+  // Páginas organizadas
+  const organizedPages = useMemo(() => {
+    if (viewMode === 'hierarchical') {
+      const tree = buildTree(pages);
+      return flattenTree(tree);
+    } else {
+      // Modo flat com ordenação
+      return [...pages].sort((a, b) => {
+        let aValue: any = a[sortField];
+        let bValue: any = b[sortField];
+
+        if (sortField === 'created_at' || sortField === 'updated_at') {
+          aValue = new Date(aValue).getTime();
+          bValue = new Date(bValue).getTime();
+        }
+
+        if (sortField === 'display_order') {
+          aValue = aValue ?? 999;
+          bValue = bValue ?? 999;
+        }
+
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }).map(p => ({ ...p, children: [], level: 0, breadcrumb: [] } as PageTreeNode));
+    }
+  }, [pages, viewMode, sortField, sortDirection, collapsedNodes]);
 
   const handleDelete = async (id: number | string) => {
     if (!confirm('Tem certeza que deseja excluir esta página?')) return;
@@ -241,34 +334,64 @@ export const PageList = () => {
             </button>
           </div>
 
-          {/* Search Bar */}
-          <form className="mt-6" onSubmit={handleSearch}>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar páginas..."
-                className="w-full pl-10 pr-28 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setSearchTerm(''); setPage(1); void fetchPages(); }}
-                  className="px-3 py-1 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition text-sm"
-                >
-                  Limpar
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
-                >
-                  Buscar
-                </button>
+          {/* Search Bar + View Toggle */}
+          <div className="mt-6 flex items-center gap-4">
+            <form className="flex-1" onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar páginas..."
+                  className="w-full pl-10 pr-28 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setSearchTerm(''); setPage(1); void fetchPages(); }}
+                    className="px-3 py-1 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition text-sm"
+                  >
+                    Limpar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
+                  >
+                    Buscar
+                  </button>
+                </div>
               </div>
+            </form>
+
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+              <button
+                onClick={() => setViewMode('hierarchical')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
+                  viewMode === 'hierarchical'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+                title="Visualização hierárquica"
+              >
+                <FolderTree className="w-4 h-4" />
+                Hierarquia
+              </button>
+              <button
+                onClick={() => setViewMode('flat')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
+                  viewMode === 'flat'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+                title="Visualização plana"
+              >
+                <List className="w-4 h-4" />
+                Lista
+              </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
@@ -287,49 +410,36 @@ export const PageList = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th
-                        onClick={() => handleSort('name')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                         <div className="flex items-center gap-2">
-                          Nome
-                          <SortIcon field="name" />
+                          {viewMode === 'hierarchical' ? 'Hierarquia' : 'Nome'}
                         </div>
                       </th>
                       <th
-                        onClick={() => handleSort('slug')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
+                        onClick={() => viewMode === 'flat' && handleSort('slug')}
+                        className={`px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${viewMode === 'flat' ? 'cursor-pointer hover:bg-gray-100 transition' : ''}`}
                       >
                         <div className="flex items-center gap-2">
                           Slug
-                          <SortIcon field="slug" />
+                          {viewMode === 'flat' && <SortIcon field="slug" />}
                         </div>
                       </th>
                       <th
-                        onClick={() => handleSort('status')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
+                        onClick={() => viewMode === 'flat' && handleSort('status')}
+                        className={`px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${viewMode === 'flat' ? 'cursor-pointer hover:bg-gray-100 transition' : ''}`}
                       >
                         <div className="flex items-center gap-2">
                           Status
-                          <SortIcon field="status" />
+                          {viewMode === 'flat' && <SortIcon field="status" />}
                         </div>
                       </th>
                       <th
-                        onClick={() => handleSort('created_at')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
+                        onClick={() => viewMode === 'flat' && handleSort('created_at')}
+                        className={`px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${viewMode === 'flat' ? 'cursor-pointer hover:bg-gray-100 transition' : ''}`}
                       >
                         <div className="flex items-center gap-2">
                           Criado em
-                          <SortIcon field="created_at" />
-                        </div>
-                      </th>
-                      <th
-                        onClick={() => handleSort('updated_at')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          Atualizado em
-                          <SortIcon field="updated_at" />
+                          {viewMode === 'flat' && <SortIcon field="created_at" />}
                         </div>
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -338,10 +448,51 @@ export const PageList = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {sortedPages.map((page) => (
+                    {organizedPages.map((page) => (
                       <tr key={String(page.id)} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{page.name}</div>
+                          <div 
+                            className="flex items-center gap-2"
+                            style={{ paddingLeft: `${page.level * 24}px` }}
+                          >
+                            {/* Toggle para páginas com filhos */}
+                            {page.children.length > 0 && viewMode === 'hierarchical' && (
+                              <button
+                                onClick={() => toggleCollapse(page.id)}
+                                className="p-0.5 hover:bg-gray-200 rounded transition"
+                              >
+                                {collapsedNodes.has(page.id) ? (
+                                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                )}
+                              </button>
+                            )}
+
+                            {/* Ícone */}
+                            {page.children.length > 0 ? (
+                              <Folder className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            ) : (
+                              <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            )}
+
+                            {/* Nome + Breadcrumb */}
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-900">
+                                {page.name}
+                              </span>
+                              {page.breadcrumb.length > 0 && viewMode === 'hierarchical' && (
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                                  {page.breadcrumb.map((crumb, idx) => (
+                                    <span key={idx} className="flex items-center gap-1">
+                                      {crumb}
+                                      <ChevronRight className="w-3 h-3" />
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-600">/{page.slug}</div>
@@ -353,9 +504,6 @@ export const PageList = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(page.created_at).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(page.updated_at).toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">

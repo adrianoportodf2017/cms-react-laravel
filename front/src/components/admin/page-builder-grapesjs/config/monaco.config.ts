@@ -135,6 +135,9 @@ const loadMonacoScript = (callback: () => void): void => {
 /**
  * Configura botões do modal (Salvar e Cancelar)
  */
+/**
+ * Configura botões do modal (Salvar e Cancelar)
+ */
 const setupModalButtons = (editor: GrapesJSEditor, modal: any): void => {
   const saveBtn = document.getElementById('save-code');
   const cancelBtn = document.getElementById('cancel-code');
@@ -146,10 +149,19 @@ const setupModalButtons = (editor: GrapesJSEditor, modal: any): void => {
       const styleMatch = newCode.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
       const htmlSemStyle = newCode.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
 
+      // ✨ LIMPA TODOS OS ESTILOS ANTIGOS ANTES
+      const cssComposer = editor.CssComposer;
+      const allRules = cssComposer.getAll();
+      allRules.reset(); // Remove todos os estilos
+
+      // Aplica HTML
       editor.setComponents(htmlSemStyle.trim());
+      
+      // ✨ Aplica NOVOS estilos (se existir)
       if (styleMatch && styleMatch[1]) {
         editor.setStyle(styleMatch[1].trim());
       }
+      
       modal.close();
       toast.success('✅ Código atualizado!');
     };

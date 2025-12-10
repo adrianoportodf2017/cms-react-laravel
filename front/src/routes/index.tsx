@@ -14,6 +14,9 @@ import Dashboard from '../pages/admin/Dashboard';
 import { MediaPage, UsersPage, SettingsPage } from '../pages/admin/AdminPages';
 import { PageBuilderPage } from '../pages/admin/pages/page-builder';
 import { PageListPage } from '../pages/admin/pages/index';
+import { TabelaAssociados } from '../pages/admin/associados/index';
+
+
 
 const router = createBrowserRouter([
     /** ===== ROTA DE LOGIN (APENAS PARA NÃO AUTENTICADOS) ===== */
@@ -53,6 +56,7 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <Dashboard /> },
             { path: 'pages', element: <PageListPage /> },
+            { path: 'associados', element: <TabelaAssociados /> },
             { path: 'pages/new', element: <PageBuilderPage /> },
             { path: 'pages/edit/:id', element: <PageBuilderPage /> },
             { path: 'media', element: <MediaPage /> },
@@ -64,7 +68,7 @@ const router = createBrowserRouter([
     /** ===== REDIRECT PARA HOME EM ROTAS NÃO ENCONTRADAS ===== */
     { path: '*', element: <Navigate to="/" replace /> },
 ], {
-    basename: '/'
+    basename: '/',
 });
 
 export function AppRouter() {

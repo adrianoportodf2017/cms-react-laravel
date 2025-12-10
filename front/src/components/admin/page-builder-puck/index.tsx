@@ -334,7 +334,7 @@ export const PageBuilder = () => {
                     />
                     {!isSlugManuallyEdited && (
                       <p className="mt-1 text-xs text-gray-500">
-                        🤖 Gerado automaticamente do nome
+                       Gerado automaticamente do nome
                       </p>
                     )}
                   </div>

@@ -406,3 +406,21 @@
 .gjs-blocks-cs.gjs-one-bg.gjs-two-color {
    padding-top: 20px !important;
 }
+
+/* Força media queries funcionarem no canvas */
+.gjs-device-mobile * {
+  max-width: 375px !important;
+}
+
+.gjs-device-tablet * {
+  max-width: 768px !important;
+}
+
+/* Simula media query mobile no canvas */
+.gjs-device-mobile [style*="color"] {
+  color: inherit !important;
+}
+
+.gjs-device-mobile [id*="#"] {
+  /* Força estilos mobile */
+}

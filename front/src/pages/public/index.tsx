@@ -1,34 +1,46 @@
-import { useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ObterPaginaPorSlug } from '../../services/pages'
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ObterPaginaPorSlug } from '../../services/pages';
+import { initCfDynamicForms } from '../../lib/cfDynamicForms';
 
 function normalizePath(pathname: string) {
   // remove "/" inicial e final
-  return pathname.replace(/^\/+|\/+$/g, '')
+  return pathname.replace(/^\/+|\/+$/g, '');
 }
 
 export default function PublicPage() {
-  const { pathname } = useLocation()
-  const fullPath = normalizePath(pathname) // ex: "sobre-nos/historia-e-ideologia"
-  const lastSegment = fullPath.split('/').filter(Boolean).pop() || ''
+  const { pathname } = useLocation();
+  const fullPath = normalizePath(pathname); // ex: "sobre-nos/historia-e-ideologia"
+  const lastSegment = fullPath.split('/').filter(Boolean).pop() || '';
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['cms-page', fullPath],
     queryFn: async () => {
       // 1) tenta path completo (caso backend aceite slugs com "/")
       try {
-        return await ObterPaginaPorSlug(fullPath)
+        return await ObterPaginaPorSlug(fullPath);
       } catch {
         // 2) fallback: tenta último segmento (slugs únicos)
-        if (!lastSegment || lastSegment === fullPath) throw new Error('not-found')
-        return await ObterPaginaPorSlug(lastSegment)
+        if (!lastSegment || lastSegment === fullPath) throw new Error('not-found');
+        return await ObterPaginaPorSlug(lastSegment);
       }
     },
-  })
+  });
+
+  // Quando o conteúdo HTML mudar, inicializa os formulários dinâmicos
+  useEffect(() => {
+    if (!data) return;
+    if (!containerRef.current) return;
+
+    initCfDynamicForms(containerRef.current);
+  }, [data]);
 
   if (!fullPath) {
     // Caso seja a home ("/"), quem renderiza é a rota index do Layout.
-    return null
+    return null;
   }
 
   if (isLoading || isFetching) {
@@ -42,7 +54,7 @@ export default function PublicPage() {
           <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200" />
         </div>
       </div>
-    )
+    );
   }
 
   if (isError || !data) {
@@ -59,15 +71,15 @@ export default function PublicPage() {
           Tentar novamente
         </button>
       </div>
-    )
+    );
   }
 
-  // data.content = { html, type: 'tiptap-html' }
   return (
     <article className="mx-auto w-full">
-    <div
-         dangerouslySetInnerHTML={{ __html: data.data.content?.html ?? '' }}
+      <div
+        ref={containerRef}
+        dangerouslySetInnerHTML={{ __html: data.data.content?.html ?? '' }}
       />
     </article>
-  )
+  );
 }

@@ -24,11 +24,13 @@ class Associado extends Model
      * Campos que podem ser preenchidos em massa
      */
     protected $fillable = [
+        'TipoPessoa',
         'NomeCompleto',
         'NumeroDocumento',
         'Email',
         'Telefone',
         'DtNascimento',
+        'Sexo',
         'Cep',
         'Endereco',
         'Numero',
@@ -36,6 +38,11 @@ class Associado extends Model
         'Bairro',
         'Cidade',
         'Uf',
+        'ValorContribuicao',
+        'FormaPagamento',
+        'BancoDebito',
+        'AgenciaDebito',
+        'ContaDebito',
         'Motivo',
         'Status',
         'IsConsentimentoLgpd',
@@ -58,6 +65,7 @@ class Associado extends Model
      * Valores padrão para os atributos
      */
     protected $attributes = [
+        'TipoPessoa' => 'PF',
         'Status' => 'Pendente',
         'IsConsentimentoLgpd' => false,
     ];
