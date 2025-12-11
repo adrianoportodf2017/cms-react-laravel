@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
 import {
   LayoutDashboard,
   FileText,
@@ -11,6 +12,7 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
+
 import { useAuthStore } from '../../../auth/auth-store';
 
 interface MenuItem {
@@ -42,10 +44,20 @@ export default function AdminSidebar() {
       path: '/admin/pages',
       badge: '3',
     },
+      {
+      title: 'Notícias',
+      icon: <FileText className="w-5 h-5" />,
+      path: '/admin/news',
+    },
     {
       title: 'Mídia',
       icon: <Image className="w-5 h-5" />,
       path: '/admin/media',
+    },
+       {
+      title: 'Associados',
+      icon: <Users className="w-5 h-5" />,
+      path: '/admin/associados',
     },
     {
       title: 'Usuários',
@@ -59,8 +71,7 @@ export default function AdminSidebar() {
     },
      {
       title: 'sair',
-      icon: <LogOut className="w-5 h-5" />
-,
+      icon: <LogOut className="w-5 h-5" />,
       path: '/logout',
     },
   ];

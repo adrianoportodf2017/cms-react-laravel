@@ -6,7 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AssociadoController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\MediaController;
-
+use App\Http\Controllers\NewsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -155,6 +155,28 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     
     // Deletar associado (soft delete)
     Route::delete('/associados/{id}', [AssociadoController::class, 'destroy']);
+});
+
+
+
+// Public routes (no authentication)
+Route::get('/news/published', [NewsController::class, 'published']);
+Route::get('/news/{key}', [NewsController::class, 'show']); // Accepts UUID or slug
+
+// Protected routes (with authentication)
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    Route::get('/news/{key}', [NewsController::class, 'show']); // Accepts UUID or slug
+
+    // Basic CRUD
+    Route::get('/news', [NewsController::class, 'index']);
+    Route::post('/news', [NewsController::class, 'store']);
+    Route::put('/news/{id}', [NewsController::class, 'update']);
+    Route::delete('/news/{id}', [NewsController::class, 'destroy']);
+
+    // Special actions
+    Route::patch('/news/{id}/publish', [NewsController::class, 'publish']);
+    Route::patch('/news/{id}/archive', [NewsController::class, 'archive']);
+    Route::post('/news/{id}/duplicate', [NewsController::class, 'duplicate']);
 });
 
 

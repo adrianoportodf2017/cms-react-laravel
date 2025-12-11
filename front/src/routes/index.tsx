@@ -15,6 +15,8 @@ import { MediaPage, UsersPage, SettingsPage } from '../pages/admin/AdminPages';
 import { PageBuilderPage } from '../pages/admin/pages/page-builder';
 import { PageListPage } from '../pages/admin/pages/index';
 import { TabelaAssociados } from '../pages/admin/associados/index';
+import { NewsListPage } from '../pages/admin/news/index';
+import { NewsFormPage } from '../pages/admin/news/new-form';
 
 
 
@@ -62,6 +64,9 @@ const router = createBrowserRouter([
             { path: 'media', element: <MediaPage /> },
             { path: 'users', element: <UsersPage /> },
             { path: 'settings', element: <SettingsPage /> },
+            { path: 'news', element: <NewsListPage /> },
+            { path: 'news/new', element: <NewsFormPage /> },
+            { path: 'news/edit/:id', element: <NewsFormPage /> },
         ]
     },
 
