@@ -51,7 +51,7 @@ export function Slides() {
       <section className="">
         <div className="relative overflow-hidden">
           {/* Layout Desktop */}
-          <div className="relative h-[60vh] hidden md:block">
+          <div className="relative h-[50vh] hidden md:block">
             {slides.map((s, idx) => (
                <Link
                       to={s.link}

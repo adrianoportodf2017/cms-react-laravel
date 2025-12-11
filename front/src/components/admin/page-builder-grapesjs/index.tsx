@@ -103,12 +103,12 @@ export const GrapesPageBuilder = () => {
         onToggleSidebar={() => setShowSidebar(!showSidebar)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex  ">
         {/* Editor Canvas */}
         <div className="flex-1">
           <div 
             id="gjs" 
-            className="h-full" 
+            className="h-full " 
             style={{ minHeight: '500px', background: '#f8f9fa' }} 
           />
         </div>

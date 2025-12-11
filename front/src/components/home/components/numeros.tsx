@@ -109,39 +109,43 @@ export function Numeros() {
               ))}
             </div>
 
-             {/* Textos e botões */}
-            <div className="text-center sm:text-left">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                Fazendo a diferença todos os dias
-              </h3>
+{/* Textos e botões */}
+<div className="bg-white rounded-xl shadow-lg p-6 text-left hover:shadow-xl transition-shadow duration-300 border-l-4 border-[#ffcc00]">
+  
+  {/* Primeiro parágrafo com ícone ODS 4 */}
+  <div className="flex gap-4 items-start mb-6">
+    <img
+      src="/thumbnail_ODS 4.png"
+      className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0"
+      alt="ODS 4 - Educação de Qualidade"
+    />
+    
+    <div className="flex-1">
+      <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+        Fazendo a diferença todos os dias
+      </h3>
+      <p className="text-gray-600 leading-relaxed">
+        Estamos presentes em todo o território nacional, levando solidariedade e desenvolvimento a quem mais precisa.
+        Cada número representa vidas transformadas, famílias apoiadas e esperança renovada.
+      </p>
+    </div>
+  </div>
 
-              {/* Primeiro parágrafo com ícone ODS 4 */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start mb-6">
-                <p className="text-gray-600 leading-relaxed flex-1">
-                  Estamos presentes em todo o território nacional, levando solidariedade e desenvolvimento a quem mais precisa.
-                  Cada número representa vidas transformadas, famílias apoiadas e esperança renovada.
-                </p>
-                <img
-                  src="/thumbnail_ODS 4.png"
-                  className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0"
-                  alt="ODS 4 - Educação de Qualidade"
-                />
-              </div>
+  {/* Segundo parágrafo com ícone ODS 8 */}
+  <div className="flex gap-4 items-start">
+    <img
+      src="/thumbnail_ODS 8.png"
+      className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0"
+      alt="ODS 8 - Trabalho Decente e Crescimento Econômico"
+    />
+    
+    <p className="text-gray-600 leading-relaxed flex-1">
+      Em sintonia com a Agenda 2030 da ONU, contribuímos para o alcance dos Objetivos de Desenvolvimento Sustentável (ODS).
+    </p>
+  </div>
 
-              {/* Segundo parágrafo com ícone ODS 8 */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start mb-6">
-                <p className="text-gray-600 leading-relaxed flex-1">
-                  Em sintonia com a Agenda 2030 da ONU, contribuímos para o alcance dos Objetivos de Desenvolvimento Sustentável (ODS).
-                </p>
-                <img
-                  src="/thumbnail_ODS 8.png"
-                  className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0"
-                  alt="ODS 8 - Trabalho Decente e Crescimento Econômico"
-                />
-              </div>
-
-              {/* Botões */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start mt-8">
+</div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start mt-8">
                 <a
                   href="/institucional"
                   className="bg-[#ffcc00] text-black px-8 py-3 rounded-full font-semibold hover:bg-yellow-600 transition-colors shadow-lg hover:shadow-xl"
@@ -156,7 +160,6 @@ export function Numeros() {
                   Como ajudar
                 </a>
               </div>
-            </div>
           </div>
         </div>
       </div>
